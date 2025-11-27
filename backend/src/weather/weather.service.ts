@@ -32,7 +32,7 @@ export class WeatherService {
     private statisticsService: WeatherStatisticsService,
     private insightsGenerator: WeatherInsightsGeneratorService,
     private exportService: WeatherExportService,
-  ) {}
+  ) { }
 
   /**
    * Cria um novo log climático
@@ -149,7 +149,7 @@ export class WeatherService {
 
     // Buscar total de documentos
     const total = await this.weatherLogModel.countDocuments(filter);
-    
+
     // Buscar documentos paginados
     const data = await this.weatherLogModel
       .find(filter)
@@ -274,7 +274,10 @@ export class WeatherService {
     });
 
     try {
-      const insights = await this.insightsGenerator.generateInsights(30, city);
+      // Só passa city se ele estiver definido
+      const insights = city
+        ? await this.insightsGenerator.generateInsights(30, city)
+        : await this.insightsGenerator.generateInsights(30);
 
       this.logger.log('Insights generated successfully', {
         service: 'backend',
