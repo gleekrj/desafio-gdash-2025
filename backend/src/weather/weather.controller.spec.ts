@@ -117,5 +117,134 @@ describe('WeatherController', () => {
       expect(service.create).toHaveBeenCalled();
     });
   });
+
+  describe('GET /weather/logs', () => {
+    it('should return paginated weather logs', async () => {
+      const mockQuery = { page: 1, limit: 10 };
+      const mockResult = {
+        data: [],
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+        hasPreviousPage: false,
+        hasNextPage: false,
+      };
+
+      mockWeatherService.findAllPaginated.mockResolvedValue(mockResult);
+
+      const result = await controller.findAll(mockQuery);
+
+      expect(service.findAllPaginated).toHaveBeenCalledWith(mockQuery);
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should handle pagination with city filter', async () => {
+      const mockQuery = { page: 1, limit: 10, city: 'São Paulo' };
+      const mockResult = {
+        data: [{ city: 'São Paulo', temperature: 25 }],
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+        hasPreviousPage: false,
+        hasNextPage: false,
+      };
+
+      mockWeatherService.findAllPaginated.mockResolvedValue(mockResult);
+
+      const result = await controller.findAll(mockQuery);
+
+      expect(service.findAllPaginated).toHaveBeenCalledWith(mockQuery);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('GET /weather/export.csv', () => {
+    it('should export CSV', async () => {
+      const mockCsv = 'timestamp,temperature,humidity\n2025-01-24,25,70';
+      const mockResponse = {
+        send: jest.fn(),
+      };
+
+      mockWeatherService.exportCsv.mockResolvedValue(mockCsv);
+
+      await controller.exportCsv(mockResponse as any);
+
+      expect(service.exportCsv).toHaveBeenCalled();
+      expect(mockResponse.send).toHaveBeenCalledWith(mockCsv);
+    });
+  });
+
+  describe('GET /weather/export.xlsx', () => {
+    it('should export XLSX', async () => {
+      const mockWorkbook = {
+        xlsx: {
+          writeBuffer: jest.fn().mockResolvedValue(Buffer.from('test')),
+        },
+      };
+      const mockResponse = {
+        send: jest.fn(),
+      };
+
+      mockWeatherService.exportXlsx.mockResolvedValue(mockWorkbook);
+
+      await controller.exportXlsx(mockResponse as any);
+
+      expect(service.exportXlsx).toHaveBeenCalled();
+      expect(mockWorkbook.xlsx.writeBuffer).toHaveBeenCalled();
+      expect(mockResponse.send).toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /weather/insights', () => {
+    it('should return insights without city filter', async () => {
+      const mockInsights = {
+        summary: 'Test summary',
+        statistics: {},
+        comfortScore: 85,
+        dayClassification: 'agradável',
+        alerts: [],
+        dataPoints: 30,
+      };
+
+      mockWeatherService.getInsights.mockResolvedValue(mockInsights);
+
+      const result = await controller.getInsights();
+
+      expect(service.getInsights).toHaveBeenCalledWith(undefined);
+      expect(result).toEqual(mockInsights);
+    });
+
+    it('should return insights with city filter', async () => {
+      const mockInsights = {
+        summary: 'Test summary',
+        statistics: {},
+        comfortScore: 85,
+        dayClassification: 'agradável',
+        alerts: [],
+        dataPoints: 30,
+      };
+
+      mockWeatherService.getInsights.mockResolvedValue(mockInsights);
+
+      const result = await controller.getInsights('São Paulo');
+
+      expect(service.getInsights).toHaveBeenCalledWith('São Paulo');
+      expect(result).toEqual(mockInsights);
+    });
+  });
+
+  describe('GET /weather/cities', () => {
+    it('should return available cities', async () => {
+      const mockCities = ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte'];
+      mockWeatherService.getAvailableCities.mockResolvedValue(mockCities);
+
+      const result = await controller.getAvailableCities();
+
+      expect(service.getAvailableCities).toHaveBeenCalled();
+      expect(result).toEqual(mockCities);
+    });
+  });
 });
 

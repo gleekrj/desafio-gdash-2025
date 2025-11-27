@@ -327,6 +327,84 @@ describe('WeatherService', () => {
       expect(result).toHaveProperty('message');
       expect(result.message).toContain('Dados insuficientes');
     });
+
+    it('should pass city parameter when provided', async () => {
+      const mockInsights = {
+        summary: 'Test summary',
+        statistics: {
+          averageTemperature: 25,
+          averageHumidity: 70,
+          maxTemperature: 30,
+          minTemperature: 20,
+          maxHumidity: 80,
+          minHumidity: 60,
+          temperatureTrend: 'estável',
+        },
+        comfortScore: 85,
+        dayClassification: 'agradável',
+        alerts: ['Nenhum alerta no momento'],
+        dataPoints: 30,
+      };
+
+      mockInsightsGenerator.generateInsights.mockResolvedValue(mockInsights);
+
+      const result = await service.getInsights('São Paulo');
+
+      expect(mockInsightsGenerator.generateInsights).toHaveBeenCalledWith(30, 'São Paulo');
+      expect(result).toEqual(mockInsights);
+    });
+
+    it('should throw error for non-insufficient-data errors', async () => {
+      const error = new Error('Database connection failed');
+      mockInsightsGenerator.generateInsights.mockRejectedValue(error);
+
+      await expect(service.getInsights()).rejects.toThrow('Database connection failed');
+    });
+  });
+
+  describe('getAvailableCities', () => {
+    it('should return available cities', async () => {
+      const mockCities = ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte'];
+      MockWeatherLogModel.distinct = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockCities),
+      });
+
+      const result = await service.getAvailableCities();
+
+      expect(MockWeatherLogModel.distinct).toHaveBeenCalledWith('city');
+      expect(result).toEqual(mockCities.sort());
+    });
+
+    it('should filter out null/undefined cities', async () => {
+      const mockCities = ['São Paulo', null, 'Rio de Janeiro', undefined, 'Belo Horizonte'];
+      MockWeatherLogModel.distinct = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockCities),
+      });
+
+      const result = await service.getAvailableCities();
+
+      expect(result).not.toContain(null);
+      expect(result).not.toContain(undefined);
+      expect(result.length).toBe(3);
+    });
+  });
+
+  describe('exportCsv error handling', () => {
+    it('should handle export errors', async () => {
+      const error = new Error('Export failed');
+      mockExportService.exportCsv.mockRejectedValue(error);
+
+      await expect(service.exportCsv()).rejects.toThrow('Export failed');
+    });
+  });
+
+  describe('exportXlsx error handling', () => {
+    it('should handle export errors', async () => {
+      const error = new Error('Export failed');
+      mockExportService.exportXlsx.mockRejectedValue(error);
+
+      await expect(service.exportXlsx()).rejects.toThrow('Export failed');
+    });
   });
 });
 

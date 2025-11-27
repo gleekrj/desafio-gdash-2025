@@ -75,9 +75,52 @@ describe('WeatherStatisticsService', () => {
       expect(result.averageTemperature).toBe(0);
       expect(result.averageHumidity).toBe(0);
     });
+
+    it('should filter by city when provided', async () => {
+      const mockLogs = [
+        { temperature: 25, humidity: 70, city: 'São Paulo' },
+        { temperature: 26, humidity: 65, city: 'São Paulo' },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      const result = await service.getRecentStatistics(30, 'São Paulo');
+
+      expect(mockWeatherLogModel.find).toHaveBeenCalled();
+      expect(result.averageTemperature).toBe(25.5);
+    });
   });
 
   describe('getTemperatureTrend', () => {
+    it('should filter by city when provided', async () => {
+      const mockLogs = Array(30)
+        .fill(null)
+        .map((_, i) => ({
+          temperature: 20 + i,
+          humidity: 70,
+          city: 'São Paulo',
+        }));
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      const result = await service.getTemperatureTrend(30, 'São Paulo');
+
+      expect(mockWeatherLogModel.find).toHaveBeenCalled();
+      expect(result).toBeDefined();
+    });
+
     it('should detect rising trend', async () => {
       // Array ordenado por timestamp DESC (mais recentes primeiro)
       // Para detectar tendência de subida, os últimos 10 devem ser maiores que os anteriores 10
