@@ -4,6 +4,7 @@ Sistema completo de coleta, processamento e visualização de dados climáticos 
 
 ## 📋 Índice
 
+- [🔒 Segurança](#-segurança-importante)
 - [Arquitetura](#arquitetura)
 - [Pré-requisitos](#pré-requisitos)
 - [Setup Inicial](#setup-inicial)
@@ -13,6 +14,67 @@ Sistema completo de coleta, processamento e visualização de dados climáticos 
 - [Testando o Sistema](#testando-o-sistema)
 - [Modos de Operação do Collector](#modos-de-operação-do-collector)
 - [Troubleshooting](#troubleshooting)
+
+## 🔒 Segurança - IMPORTANTE
+
+### ⚠️ Antes de Usar em Produção
+
+Este sistema foi configurado para **desenvolvimento local** com credenciais padrão. Antes de usar em produção ou expor na internet:
+
+1. **Altere TODAS as credenciais padrão**:
+
+   - ✅ RabbitMQ: Altere `guest/guest` para credenciais fortes
+   - ✅ JWT_SECRET: Gere uma chave aleatória segura (veja `.env.example`)
+   - ✅ MongoDB: Configure autenticação se necessário
+
+2. **URLs e Endereços**:
+
+   - ✅ URLs `localhost` são **apenas para desenvolvimento local**
+   - ✅ Em produção, use domínios próprios ou IPs seguros
+   - ✅ Configure HTTPS/TLS para todas as conexões
+   - ✅ Não exponha portas de banco de dados publicamente
+
+3. **Arquivo `.env`**:
+
+   - ✅ **NUNCA** commite o arquivo `.env` no Git (já está no `.gitignore`)
+   - ✅ Use variáveis de ambiente do sistema em produção
+   - ✅ Use secrets management (Docker Secrets, Kubernetes Secrets, etc)
+
+4. **Configurações de Segurança**:
+   - ✅ CORS configurado adequadamente
+   - ✅ Rate limiting ativo
+   - ✅ Autenticação JWT obrigatória para endpoints sensíveis
+   - ✅ Validação de dados de entrada
+
+### 📝 Sobre Endereços no README
+
+Os endereços `localhost` documentados neste README **não são uma falha de segurança** porque:
+
+- São apenas para desenvolvimento local
+- Não expõem informações sensíveis (apenas portas padrão)
+- São necessários para que desenvolvedores saibam como acessar os serviços
+
+**Porém**, em produção você deve:
+
+- Usar domínios próprios com HTTPS
+- Não expor portas de banco de dados
+- Configurar firewall adequadamente
+- Usar credenciais fortes
+
+### 🔐 Checklist de Segurança para Produção
+
+- [ ] Alterar credenciais padrão do RabbitMQ
+- [ ] Gerar JWT_SECRET seguro e aleatório
+- [ ] Configurar autenticação no MongoDB
+- [ ] Configurar HTTPS/TLS
+- [ ] Usar domínios próprios (não localhost)
+- [ ] Configurar firewall adequadamente
+- [ ] Não expor portas de banco de dados publicamente
+- [ ] Usar secrets management para credenciais
+- [ ] Habilitar logs de segurança
+- [ ] Configurar backup seguro dos dados
+
+---
 
 ## 🏗️ Arquitetura
 
@@ -37,16 +99,19 @@ Collector → [Modo Direct] → Backend → MongoDB
 ### Instalar Docker
 
 #### Windows
+
 1. Baixe o [Docker Desktop para Windows](https://www.docker.com/products/docker-desktop/)
 2. Execute o instalador e siga as instruções
 3. Reinicie o computador se necessário
 4. Verifique a instalação:
+
 ```bash
 docker --version
 docker compose version
 ```
 
 #### Linux (Ubuntu/Debian)
+
 ```bash
 # Atualizar pacotes
 sudo apt update
@@ -76,10 +141,12 @@ docker compose version
 ```
 
 #### macOS
+
 1. Baixe o [Docker Desktop para Mac](https://www.docker.com/products/docker-desktop/)
 2. Instale arrastando para a pasta Applications
 3. Abra Docker Desktop e aguarde a inicialização
 4. Verifique a instalação:
+
 ```bash
 docker --version
 docker compose version
@@ -88,12 +155,14 @@ docker compose version
 ## 🚀 Setup Inicial
 
 1. **Clone o repositório** (se ainda não tiver):
+
 ```bash
 git clone <url-do-repositorio>
 cd desafio-gdash
 ```
 
 2. **Crie o arquivo `.env`** a partir do exemplo:
+
 ```bash
 cp .env.example .env
 ```
@@ -108,11 +177,34 @@ cp .env.example .env
 
 ## ⚙️ Configuração
 
+### 🔒 Segurança - Leia Antes de Configurar!
+
+**⚠️ CRÍTICO**: Este sistema usa credenciais padrão apenas para desenvolvimento local. Antes de usar em produção ou expor na internet:
+
+1. **Altere TODAS as credenciais padrão**:
+
+   - RabbitMQ: `guest/guest` → Use credenciais fortes
+   - JWT_SECRET: Gere uma chave aleatória segura (veja `.env.example`)
+   - MongoDB: Configure autenticação se necessário
+
+2. **Nunca commite o arquivo `.env`** (já está no `.gitignore`)
+
+3. **URLs `localhost` são apenas para desenvolvimento local**:
+
+   - Em produção, use domínios próprios ou IPs seguros
+   - Configure HTTPS/TLS para todas as conexões
+
+4. **Revise as configurações de segurança**:
+   - CORS configurado adequadamente
+   - Rate limiting ativo
+   - Autenticação JWT obrigatória para endpoints sensíveis
+
 ### Estratégia de Configuração
 
 **⚠️ IMPORTANTE**: Todas as variáveis críticas (credenciais, URLs de banco, etc.) **DEVEM** estar no arquivo `.env`. O `docker-compose.yml` não possui fallbacks para valores críticos por questões de segurança.
 
-**Melhor prática**: 
+**Melhor prática**:
+
 - ✅ **SEMPRE** crie o arquivo `.env` a partir do `.env.example` antes de executar
 - ✅ O arquivo `.env` não deve ser commitado no Git (já deve estar no `.gitignore`)
 - ✅ Use `.env.example` como referência completa - ele contém todas as variáveis com explicações detalhadas
@@ -122,11 +214,13 @@ cp .env.example .env
 ### Passo a Passo de Configuração
 
 1. **Copie o arquivo de exemplo**:
+
 ```bash
 cp .env.example .env
 ```
 
 2. **Edite o arquivo `.env`** com um editor de texto:
+
 ```bash
 # Windows
 notepad .env
@@ -149,30 +243,40 @@ vim .env
 As seguintes variáveis **DEVEM** estar configuradas no `.env`:
 
 #### MongoDB
+
 - `MONGO_URI` - URI de conexão com MongoDB (obrigatório)
   - Docker: `mongodb://mongo:27017/gdash`
   - Local: `mongodb://localhost:27017/gdash`
 
 #### RabbitMQ
+
 - `RABBITMQ_URL` - URL de conexão AMQP (obrigatório)
-  - Docker: `amqp://guest:guest@rabbitmq:5672/`
-  - Local: `amqp://guest:guest@localhost:5672/`
+  - Docker: `amqp://guest:guest@rabbitmq:5672/` (⚠️ apenas para desenvolvimento)
+  - Local: `amqp://guest:guest@localhost:5672/` (⚠️ apenas para desenvolvimento)
+  - **🔒 PRODUÇÃO**: Use credenciais fortes e seguras!
 - `RABBITMQ_DEFAULT_USER` - Usuário do RabbitMQ (obrigatório)
+  - ⚠️ **Altere o valor padrão `guest` em produção!**
 - `RABBITMQ_DEFAULT_PASS` - Senha do RabbitMQ (obrigatório)
+  - ⚠️ **Altere o valor padrão `guest` em produção!**
 
 #### Backend
+
 - `BACKEND_URL` - URL do backend para comunicação interna (obrigatório)
   - Docker: `http://backend:3000`
   - Usado por: Worker e Collector (modo direct)
 
 #### Frontend
+
 - `VITE_API_URL` - URL da API acessível do navegador (obrigatório)
   - Docker: `http://localhost:3000`
   - Deve ser acessível do host (não use nomes de serviços Docker)
 
 #### Segurança
+
 - `JWT_SECRET` - Chave secreta para JWT (obrigatório)
-  - Gere uma string aleatória segura para produção
+  - ⚠️ **CRÍTICO**: Gere uma string aleatória segura para produção
+  - **NUNCA** use valores padrão ou simples em produção
+  - Veja comandos para gerar no `.env.example`
 
 ### Variáveis Opcionais
 
@@ -190,6 +294,7 @@ As seguintes variáveis têm valores padrão, mas podem ser customizadas:
 ### Documentação Completa
 
 O arquivo `.env.example` contém:
+
 - ✅ Todas as variáveis disponíveis
 - ✅ Explicações detalhadas de cada variável
 - ✅ Exemplos de valores para diferentes cenários
@@ -210,6 +315,7 @@ docker compose up --build
 ```
 
 Este comando irá:
+
 1. Construir todas as imagens Docker necessárias
 2. Criar volumes e redes
 3. Iniciar os serviços na ordem correta (respeitando `depends_on`)
@@ -238,11 +344,13 @@ docker compose down -v
 ### Ver Logs
 
 Ver logs de todos os serviços:
+
 ```bash
 docker compose logs -f
 ```
 
 Ver logs de um serviço específico:
+
 ```bash
 docker compose logs -f backend
 docker compose logs -f collector
@@ -258,43 +366,90 @@ docker compose restart collector
 
 ## 🌐 Acessando os Serviços
 
+> **⚠️ NOTA DE SEGURANÇA**: As URLs abaixo são para desenvolvimento local. Em produção, use domínios próprios com HTTPS configurado.
+
 ### Frontend
+
 - **URL**: http://localhost:5173
 - Interface web para visualizar dados climáticos coletados
+- **🔒 Em produção**: Configure HTTPS e use um domínio próprio
 
 ### Backend API
+
 - **URL Base**: http://localhost:3000
-- **Health Check**: http://localhost:3000/health
-- **Swagger/OpenAPI**: http://localhost:3000/api
-- **Endpoints**:
-  - `GET /health` - Status do serviço
-  - `POST /weather/logs` - Criar log climático
-  - `GET /weather/logs` - Listar logs com paginação (`?page=1&limit=10&city=São Paulo`)
-  - `GET /weather/insights` - Obter insights e análises dos dados
-  - `GET /weather/export.csv` - Exportar dados em CSV
-  - `GET /weather/export.xlsx` - Exportar dados em XLSX
-  - `POST /auth/register` - Registrar novo usuário
-  - `POST /auth/login` - Fazer login
-  - `GET /users` - Listar usuários (requer autenticação)
+- **Health Check**: http://localhost:3000/health (público, não requer autenticação)
+- **Swagger/OpenAPI**: http://localhost:3000/api (público, para documentação)
+- **Endpoints Públicos**:
+  - `GET /health` - Status do serviço (público)
+  - `POST /auth/register` - Registrar novo usuário (público)
+  - `POST /auth/login` - Fazer login (público)
+- **Endpoints Protegidos** (requerem autenticação JWT):
+  - **Weather** (dados climáticos):
+    - `POST /weather/logs` - Criar log climático (interno, usado por collector/worker)
+    - `GET /weather/logs` - Listar logs com paginação (`?page=1&limit=10&city=São Paulo`)
+    - `GET /weather/insights` - Obter insights e análises dos dados
+    - `GET /weather/export.csv` - Exportar dados em CSV
+    - `GET /weather/export.xlsx` - Exportar dados em XLSX
+  - **Users** (gerenciamento de usuários - requer admin):
+    - `GET /users` - Listar usuários
+    - `POST /users` - Criar usuário
+    - `GET /users/:id` - Obter usuário por ID
+    - `PATCH /users/:id` - Atualizar usuário
+    - `DELETE /users/:id` - Deletar usuário
+    - `PATCH /users/:id/password` - Alterar senha
+  - **Pokemon** (dados de Pokémon):
+    - `GET /pokemon` - Listar Pokémon com paginação
+    - `GET /pokemon/:id` - Obter detalhes de um Pokémon
+  - **StarWars** (dados de Star Wars):
+    - `GET /starwars/people` - Listar personagens
+    - `GET /starwars/people/:id` - Obter detalhes de personagem
+    - `GET /starwars/films` - Listar filmes
+    - `GET /starwars/films/:id` - Obter detalhes de filme
+  - **Games** (dados de jogos):
+    - `GET /games` - Listar jogos com paginação
+    - `GET /games/:id` - Obter detalhes de um jogo
+
+> **💡 Dica**: Para ver todos os endpoints com detalhes, exemplos e testá-los interativamente, acesse o Swagger em http://localhost:3000/api
 
 ### RabbitMQ Management UI
+
 - **URL**: http://localhost:15672
-- **Usuário padrão**: `guest`
-- **Senha padrão**: `guest`
+- **⚠️ SEGURANÇA**: As credenciais padrão (`guest/guest`) são apenas para desenvolvimento local
+- **🔒 PRODUÇÃO**: Altere as credenciais no arquivo `.env` antes de usar em produção!
+
+**Configuração de credenciais**:
+
+1. Edite o arquivo `.env` e altere:
+   ```env
+   RABBITMQ_DEFAULT_USER=seu_usuario_seguro
+   RABBITMQ_DEFAULT_PASS=sua_senha_segura
+   RABBITMQ_URL=amqp://seu_usuario_seguro:sua_senha_segura@rabbitmq:5672/
+   ```
+2. Reinicie o serviço RabbitMQ: `docker compose restart rabbitmq`
 
 Na interface do RabbitMQ você pode:
+
 - Ver filas e mensagens
 - Monitorar conexões e canais
 - Verificar estatísticas de mensagens
 - Gerenciar exchanges e bindings
 
 ### MongoDB
-- **Porta**: 27017
+
+- **Porta**: 27017 (exposta apenas para desenvolvimento local)
 - **URI de conexão**: `mongodb://localhost:27017/gdash`
+- **🔒 Em produção**: Configure autenticação e não exponha a porta publicamente
 
 Para acessar via MongoDB Compass ou CLI:
+
 ```bash
 mongosh mongodb://localhost:27017/gdash
+```
+
+**⚠️ Segurança**: Em produção, use autenticação:
+
+```bash
+mongosh mongodb://usuario:senha@localhost:27017/gdash?authSource=admin
 ```
 
 ## 🧪 Testando o Sistema
@@ -306,8 +461,9 @@ curl http://localhost:3000/health
 ```
 
 Resposta esperada:
+
 ```json
-{"status":"ok"}
+{ "status": "ok" }
 ```
 
 ### 2. Testar Criação de Log Climático (POST)
@@ -330,6 +486,7 @@ curl http://localhost:3000/weather/logs
 ```
 
 Com limite:
+
 ```bash
 curl http://localhost:3000/weather/logs?limit=10
 ```
@@ -337,26 +494,31 @@ curl http://localhost:3000/weather/logs?limit=10
 ### 4. Testar Collector em Modo Direct
 
 1. **Parar o collector atual** (se estiver rodando):
+
 ```bash
 docker compose stop collector
 ```
 
 2. **Atualizar `.env`**:
+
 ```env
 COLLECTOR_MODE=direct
 ```
 
 3. **Reiniciar o collector**:
+
 ```bash
 docker compose up -d collector
 ```
 
 4. **Verificar logs**:
+
 ```bash
 docker compose logs -f collector
 ```
 
 5. **Verificar dados no backend**:
+
 ```bash
 curl http://localhost:3000/weather/logs
 ```
@@ -364,30 +526,36 @@ curl http://localhost:3000/weather/logs
 ### 5. Testar Collector em Modo Rabbit
 
 1. **Atualizar `.env`**:
+
 ```env
 COLLECTOR_MODE=rabbit
 ```
 
 2. **Reiniciar collector e worker**:
+
 ```bash
 docker compose restart collector worker
 ```
 
 3. **Verificar logs do collector**:
+
 ```bash
 docker compose logs -f collector
 ```
 
 4. **Verificar logs do worker**:
+
 ```bash
 docker compose logs -f worker
 ```
 
 5. **Acessar RabbitMQ UI** (http://localhost:15672):
+
    - Verificar fila `weather`
    - Ver mensagens sendo processadas
 
 6. **Verificar dados no backend**:
+
 ```bash
 curl http://localhost:3000/weather/logs
 ```
@@ -395,16 +563,19 @@ curl http://localhost:3000/weather/logs
 ### 6. Testar Fluxo Completo
 
 1. **Iniciar todos os serviços**:
+
 ```bash
 docker compose up --build -d
 ```
 
 2. **Aguardar inicialização** (30-60 segundos):
+
 ```bash
 docker compose ps
 ```
 
 3. **Verificar health do backend**:
+
 ```bash
 curl http://localhost:3000/health
 ```
@@ -414,6 +585,7 @@ curl http://localhost:3000/health
 5. **Aguardar coleta automática** (intervalo configurado em `COLLECT_INTERVAL`)
 
 6. **Verificar dados no frontend** ou via API:
+
 ```bash
 curl http://localhost:3000/weather/logs
 ```
@@ -435,15 +607,18 @@ curl http://localhost:3000/weather/export.xlsx -o weather_data.xlsx
 O collector envia dados diretamente para o backend via HTTP POST.
 
 **Vantagens**:
+
 - Simples e direto
 - Não requer RabbitMQ
 - Menor latência
 
 **Desvantagens**:
+
 - Sem retry automático em caso de falha
 - Pode sobrecarregar o backend
 
 **Configuração**:
+
 ```env
 COLLECTOR_MODE=direct
 ```
@@ -453,23 +628,28 @@ COLLECTOR_MODE=direct
 O collector publica mensagens no RabbitMQ, e o worker consome e envia para o backend.
 
 **Vantagens**:
+
 - Desacoplamento entre collector e backend
 - Retry automático via worker
 - Melhor para alta carga
 - Mensagens não são perdidas (persistência)
 
 **Desvantagens**:
+
 - Requer RabbitMQ rodando
 - Maior complexidade
 
 **Configuração**:
+
 ```env
 COLLECTOR_MODE=rabbit
 ```
 
 **Para alternar entre modos**:
+
 1. Edite `.env` e altere `COLLECTOR_MODE`
 2. Reinicie o collector:
+
 ```bash
 docker compose restart collector
 ```
@@ -481,17 +661,21 @@ docker compose restart collector
 **Problema**: Backend falha ao conectar no MongoDB
 
 **Solução**:
+
 1. Verifique se MongoDB está rodando:
+
 ```bash
 docker compose ps mongo
 ```
 
 2. Verifique a variável `MONGO_URI` no `.env`:
+
 ```env
 MONGO_URI=mongodb://mongo:27017/gdash
 ```
 
 3. Verifique logs:
+
 ```bash
 docker compose logs backend
 ```
@@ -501,17 +685,21 @@ docker compose logs backend
 **Problema**: Mensagens ficam na fila do RabbitMQ mas não são processadas
 
 **Solução**:
+
 1. Verifique se worker está rodando:
+
 ```bash
 docker compose ps worker
 ```
 
 2. Verifique logs do worker:
+
 ```bash
 docker compose logs worker
 ```
 
 3. Verifique se backend está acessível:
+
 ```bash
 curl http://localhost:3000/health
 ```
@@ -523,12 +711,15 @@ curl http://localhost:3000/health
 **Problema**: Collector não está coletando ou enviando dados
 
 **Solução**:
+
 1. Verifique logs:
+
 ```bash
 docker compose logs collector
 ```
 
 2. Verifique modo de operação:
+
 ```bash
 docker compose exec collector env | grep COLLECTOR_MODE
 ```
@@ -541,18 +732,22 @@ docker compose exec collector env | grep COLLECTOR_MODE
 **Problema**: Frontend mostra erro ao buscar dados
 
 **Solução**:
+
 1. Verifique se backend está rodando:
+
 ```bash
 curl http://localhost:3000/health
 ```
 
 2. Verifique variável `VITE_API_URL` no `.env`:
+
 ```env
 VITE_API_URL=http://localhost:3000
 ```
 
 3. Verifique console do navegador (F12) para erros CORS
 4. Reinicie o frontend:
+
 ```bash
 docker compose restart frontend
 ```
@@ -562,7 +757,9 @@ docker compose restart frontend
 **Problema**: Erro ao iniciar serviços (porta já em uso)
 
 **Solução**:
+
 1. Verifique qual processo está usando a porta:
+
 ```bash
 # Windows
 netstat -ano | findstr :3000
@@ -614,30 +811,37 @@ desafio-gdash/
 ## ✨ Funcionalidades Implementadas
 
 ### ✅ Swagger/OpenAPI
+
 - Documentação completa da API disponível em `/api`
 - Todos os endpoints documentados com exemplos
 - Interface interativa para testar endpoints
 - Autenticação JWT integrada na documentação
 
 ### ✅ Paginação
+
 - API de weather logs com paginação completa
 - Suporte a filtros por cidade
 - Metadados de paginação (total, páginas, navegação)
 - Frontend com controles de paginação
 
 ### ✅ Testes Automatizados
+
 - Testes unitários para controllers e services
-- Configuração Jest completa
-- CI/CD com GitHub Actions
+- Configuração Jest completa (backend) e Vitest (frontend)
+- Cobertura de testes com thresholds mínimos (70%)
+- Relatórios de cobertura integrados ao CI/CD
+- Upload automático de cobertura para Codecov
 - Testes executados automaticamente em cada push
 
 ### ✅ CI/CD
+
 - Pipeline GitHub Actions configurado
 - Testes automatizados no backend e frontend
 - Build de imagens Docker
 - Suporte a MongoDB em testes
 
 ### ✅ Dashboard Avançado
+
 - Paginação no frontend
 - Filtros por cidade
 - Gráficos interativos (Chart.js)
@@ -646,6 +850,7 @@ desafio-gdash/
 - Interface responsiva e moderna
 
 ### ✅ Deploy em Ambiente Gratuito
+
 - Configuração para Railway
 - Configuração para Render
 - Documentação completa de deploy
@@ -653,7 +858,34 @@ desafio-gdash/
 
 ## 🚀 Deploy
 
-Consulte o arquivo [DEPLOY.md](./DEPLOY.md) para instruções detalhadas de deploy em ambientes gratuitos (Railway, Render).
+### Railway (Recomendado)
+
+Para deploy rápido no Railway, consulte:
+
+- **[RAILWAY_SETUP.md](./RAILWAY_SETUP.md)** - Guia rápido (5 minutos)
+- **[DEPLOY.md](./DEPLOY.md)** - Guia completo e detalhado
+
+### Resumo Rápido
+
+1. Crie projeto no Railway e conecte seu repositório GitHub
+2. Adicione MongoDB (addon Railway ou MongoDB Atlas)
+3. Deploy Backend: Root Directory `backend`, Start Command `npm run start:prod`
+4. Deploy Frontend: Root Directory `frontend`, configure `VITE_API_URL`
+5. Configure variáveis de ambiente (veja [DEPLOY.md](./DEPLOY.md))
+
+### Variáveis Essenciais
+
+**Backend**:
+
+- `MONGO_URI` - Connection string do MongoDB
+- `JWT_SECRET` - Chave secreta para JWT (gere com `openssl rand -base64 32`)
+- `FRONTEND_URL` - URL do frontend para CORS
+
+**Frontend**:
+
+- `VITE_API_URL` - URL do backend
+
+Para instruções completas, veja [DEPLOY.md](./DEPLOY.md).
 
 ## 🧪 Testes
 
@@ -671,10 +903,30 @@ npm run test:cov
 npm run test:watch
 ```
 
+### Cobertura de Testes
+
+O projeto possui configuração de cobertura de testes com thresholds mínimos:
+
+- **Backend (Jest)**: 
+  - Threshold mínimo: 70% para branches, functions, lines e statements
+  - Relatórios gerados em `backend/coverage/`
+  - Visualização HTML disponível após executar `npm run test:cov`
+
+- **Frontend (Vitest)**:
+  - Threshold mínimo: 70% para lines, functions, branches e statements
+  - Configuração em `frontend/vitest.config.ts`
+
+- **Collector (Python)**:
+  - Configuração pytest com cobertura em `collector-python/pytest.ini`
+  - Relatórios HTML e terminais disponíveis
+
 ### CI/CD
 
 O pipeline CI/CD executa automaticamente:
+
 - Testes do backend com MongoDB
+- Testes de cobertura do backend e frontend
+- Upload de relatórios de cobertura para Codecov
 - Linter do frontend
 - Build do frontend
 - Build de imagens Docker (apenas em push para main)
@@ -703,4 +955,3 @@ Este projeto é parte de um desafio técnico.
 ---
 
 **Desenvolvido com ❤️ usando Docker, NestJS, React, Python e Go**
-

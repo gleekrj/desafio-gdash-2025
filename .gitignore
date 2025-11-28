@@ -35,6 +35,9 @@ coverage/
 htmlcov/
 .pytest_cache/
 .coverage
+*-coverage*.txt
+coverage-report.txt
+test-coverage*.txt
 
 # IDE
 .vscode/
