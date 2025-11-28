@@ -118,26 +118,34 @@ func init() {
 		log.Fatal("[worker] RABBITMQ_URL environment variable is required")
 	}
 
-	// Detectar se está rodando localmente (fora do Docker) e ajustar URLs
-	if isRunningLocally() {
-		rabbitmqURL = adjustURLForLocal(rabbitmqURL, "rabbitmq", "localhost")
-		log.Printf("[worker] Detected local execution, adjusted RABBITMQ_URL")
-	}
-
 	// Backend URL - usar BACKEND_URL do env ou padrão
 	backendURL = os.Getenv("BACKEND_URL")
 	if backendURL == "" {
 		backendURL = "http://backend:3000"
 	}
 
-	// Garantir que a URL tenha protocolo antes de qualquer processamento
+	// Detectar se está rodando localmente (fora do Docker)
+	isLocal := isRunningLocally()
+	
+	// Garantir protocolos antes de verificar e ajustar
+	// RabbitMQ URL geralmente já vem com protocolo (amqp://, amqps://), mas vamos garantir
+	// Backend URL precisa garantir protocolo
 	backendURL = ensureProtocol(backendURL)
-
-	// Ajustar backend URL para local se necessário
-	if isRunningLocally() {
+	
+	// Ajustar RabbitMQ URL apenas se for URL Docker interna (ex: rabbitmq:5672)
+	// Não ajustar URLs externas (ex: amqps://host.cloudamqp.com)
+	if isLocal && isDockerInternalURL(rabbitmqURL) {
+		rabbitmqURL = adjustURLForLocal(rabbitmqURL, "rabbitmq", "localhost")
+		log.Printf("[worker] Detected local execution, adjusted RABBITMQ_URL to localhost")
+	}
+	
+	// Ajustar backend URL apenas se for URL Docker interna (ex: backend:3000)
+	// NUNCA ajustar URLs de produção (que contêm domínios externos como .railway.app, .com, etc)
+	if isLocal && isDockerInternalURL(backendURL) {
 		backendURL = adjustURLForLocal(backendURL, "backend", "localhost")
-		// Garantir protocolo novamente após ajuste (pode remover http:// durante replace)
+		// Garantir protocolo novamente após ajuste
 		backendURL = ensureProtocol(backendURL)
+		log.Printf("[worker] Detected local execution, adjusted BACKEND_URL to localhost")
 	}
 
 	// Remover barra final se existir antes de adicionar o path
@@ -166,9 +174,78 @@ func isRunningLocally() bool {
 	return err != nil
 }
 
+// isDockerInternalURL verifica se a URL é uma URL Docker interna (ex: backend:3000, rabbitmq:5672)
+// Retorna true apenas para URLs que não são domínios externos
+func isDockerInternalURL(url string) bool {
+	// Exemplos de URLs Docker internas (retornar true):
+	//   - http://backend:3000
+	//   - backend:3000
+	//   - http://rabbitmq:5672
+	//   - amqp://rabbitmq:5672
+	// Exemplos de URLs externas (retornar false - NÃO ajustar):
+	//   - https://backend.example.com
+	//   - https://backend.up.railway.app
+	//   - https://desafio-gdash-backend.up.railway.app
+	//   - http://localhost:3000 (já é localhost, não precisa ajustar)
+	
+	// Remover protocolo para análise (incluindo amqp, amqps)
+	cleanURL := url
+	protocols := []string{"http://", "https://", "amqp://", "amqps://"}
+	for _, proto := range protocols {
+		if strings.HasPrefix(cleanURL, proto) {
+			cleanURL = strings.TrimPrefix(cleanURL, proto)
+			break
+		}
+	}
+	
+	// Se contém localhost ou 127.0.0.1, não precisa ajustar (já é local)
+	if strings.HasPrefix(cleanURL, "localhost") || strings.HasPrefix(cleanURL, "127.0.0.1") {
+		return false
+	}
+	
+	// Extrair o hostname (parte antes de : ou /)
+	hostname := cleanURL
+	if idx := strings.Index(hostname, ":"); idx != -1 {
+		hostname = hostname[:idx]
+	}
+	if idx := strings.Index(hostname, "/"); idx != -1 {
+		hostname = hostname[:idx]
+	}
+	
+	// Se o hostname contém ponto, é um domínio externo (ex: backend.up.railway.app)
+	// Se não contém ponto, é provavelmente um nome de serviço Docker (ex: backend, rabbitmq)
+	return !strings.Contains(hostname, ".")
+}
+
 // adjustURLForLocal substitui o hostname Docker por localhost na URL
+// Esta função só deve ser chamada se isDockerInternalURL retornar true
+// Exemplo: "http://backend:3000" -> "http://localhost:3000"
 func adjustURLForLocal(url, dockerHost, localHost string) string {
-	return strings.Replace(url, dockerHost, localHost, 1)
+	// Extrair protocolo
+	protocol := ""
+	if strings.HasPrefix(url, "http://") {
+		protocol = "http://"
+		url = strings.TrimPrefix(url, "http://")
+	} else if strings.HasPrefix(url, "https://") {
+		protocol = "https://"
+		url = strings.TrimPrefix(url, "https://")
+	} else if strings.HasPrefix(url, "amqp://") {
+		protocol = "amqp://"
+		url = strings.TrimPrefix(url, "amqp://")
+	} else if strings.HasPrefix(url, "amqps://") {
+		protocol = "amqps://"
+		url = strings.TrimPrefix(url, "amqps://")
+	}
+	
+	// Substituir hostname Docker por localhost
+	// Exemplo: "backend:3000" -> "localhost:3000"
+	if strings.HasPrefix(url, dockerHost+":") {
+		url = strings.Replace(url, dockerHost+":", localHost+":", 1)
+	} else if url == dockerHost {
+		url = localHost
+	}
+	
+	return protocol + url
 }
 
 // ensureProtocol garante que a URL tenha um protocolo válido (http:// ou https://)
