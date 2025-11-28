@@ -23,6 +23,9 @@ describe('HttpExceptionFilter', () => {
     mockRequest = {
       url: '/test',
       method: 'GET',
+      headers: {
+        origin: 'http://localhost:5173',
+      },
     };
   });
 

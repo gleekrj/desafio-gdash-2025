@@ -590,5 +590,121 @@ describe('UsersService', () => {
       expect(MockUserModel.countDocuments).toHaveBeenCalledWith({ role: 'admin' });
     });
   });
+
+  describe('updateTheme', () => {
+    it('should update user theme', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const theme = 'dark';
+
+      const existingUser = {
+        _id: userId,
+        name: 'Test User',
+        email: 'test@example.com',
+      };
+
+      const updatedUser = {
+        _id: userId,
+        ...existingUser,
+        theme,
+        toObject: jest.fn().mockReturnValue({
+          _id: userId,
+          ...existingUser,
+          theme,
+        }),
+      };
+
+      const mockQuery = {
+        exec: jest.fn().mockResolvedValue(existingUser),
+      };
+
+      const mockUpdateQuery = {
+        exec: jest.fn().mockResolvedValue(updatedUser),
+      };
+
+      MockUserModel.findById.mockReturnValue(mockQuery);
+      MockUserModel.findByIdAndUpdate.mockReturnValue(mockUpdateQuery);
+
+      const result = await service.updateTheme(userId, theme);
+
+      expect(MockUserModel.findById).toHaveBeenCalledWith(userId);
+      expect(MockUserModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        userId,
+        { theme },
+        { new: true }
+      );
+      expect(result).toBeDefined();
+      expect(result.theme).toBe(theme);
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('should throw HttpException when user not found', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const theme = 'dark';
+
+      const mockQuery = {
+        exec: jest.fn().mockResolvedValue(null),
+      };
+
+      MockUserModel.findById.mockReturnValue(mockQuery);
+
+      await expect(service.updateTheme(userId, theme)).rejects.toThrow(HttpException);
+      await expect(service.updateTheme(userId, theme)).rejects.toThrow('Usuário não encontrado');
+    });
+  });
+
+  describe('getTheme', () => {
+    it('should get user theme', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const mockUser = {
+        _id: userId,
+        theme: 'dark',
+      };
+
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockUser),
+      };
+
+      MockUserModel.findById = jest.fn().mockReturnValue(mockQuery);
+
+      const result = await service.getTheme(userId);
+
+      expect(MockUserModel.findById).toHaveBeenCalledWith(userId);
+      expect(result).toEqual({ theme: 'dark' });
+    });
+
+    it('should return null when theme is not set', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const mockUser = {
+        _id: userId,
+        theme: undefined,
+      };
+
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockUser),
+      };
+
+      MockUserModel.findById = jest.fn().mockReturnValue(mockQuery);
+
+      const result = await service.getTheme(userId);
+
+      expect(result).toEqual({ theme: null });
+    });
+
+    it('should throw HttpException when user not found', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      };
+
+      MockUserModel.findById = jest.fn().mockReturnValue(mockQuery);
+
+      await expect(service.getTheme(userId)).rejects.toThrow(HttpException);
+      await expect(service.getTheme(userId)).rejects.toThrow('Usuário não encontrado');
+    });
+  });
 });
 

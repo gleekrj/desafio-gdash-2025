@@ -4,6 +4,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateThemeDto } from './dto/update-theme.dto';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -16,6 +17,8 @@ describe('UsersController', () => {
     update: jest.fn(),
     remove: jest.fn(),
     changePassword: jest.fn(),
+    updateTheme: jest.fn(),
+    getTheme: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -113,6 +116,53 @@ describe('UsersController', () => {
       await controller.changePassword('123', changePasswordDto);
 
       expect(service.changePassword).toHaveBeenCalledWith('123', changePasswordDto);
+    });
+  });
+
+  describe('updateTheme', () => {
+    it('should update user theme', async () => {
+      const updateThemeDto = { theme: 'dark' as const };
+      const mockUser = { _id: '123', theme: 'dark' };
+      mockUsersService.updateTheme.mockResolvedValue(mockUser);
+
+      const req = {
+        user: { _id: '123', role: 'user' },
+      };
+
+      const result = await controller.updateTheme('123', updateThemeDto, req);
+
+      expect(service.updateTheme).toHaveBeenCalledWith('123', 'dark');
+      expect(result).toEqual({ theme: 'dark' });
+    });
+
+    it('should allow admin to update any user theme', async () => {
+      const updateThemeDto = { theme: 'light' as const };
+      const mockUser = { _id: '456', theme: 'light' };
+      mockUsersService.updateTheme.mockResolvedValue(mockUser);
+
+      const req = {
+        user: { _id: '123', role: 'admin' },
+      };
+
+      const result = await controller.updateTheme('456', updateThemeDto, req);
+
+      expect(service.updateTheme).toHaveBeenCalledWith('456', 'light');
+      expect(result).toEqual({ theme: 'light' });
+    });
+  });
+
+  describe('getTheme', () => {
+    it('should get user theme', async () => {
+      mockUsersService.getTheme.mockResolvedValue({ theme: 'dark' });
+
+      const req = {
+        user: { _id: '123', role: 'user' },
+      };
+
+      const result = await controller.getTheme('123', req);
+
+      expect(service.getTheme).toHaveBeenCalledWith('123');
+      expect(result).toEqual({ theme: 'dark' });
     });
   });
 });
