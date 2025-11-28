@@ -73,6 +73,9 @@ function ensureProtocol(url: string): string {
 const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const API_BASE_URL = ensureProtocol(rawApiUrl);
 
+// Log da URL da API no console para debug
+console.log('[frontend] API Base URL configured:', API_BASE_URL);
+
 // Helper para fazer requisições autenticadas
 async function authenticatedFetch(url: string, options: RequestInit = {}) {
   const token = localStorage.getItem('token');
@@ -120,39 +123,68 @@ export async function login(email: string, password: string): Promise<LoginRespo
 }
 
 export async function register(name: string, email: string, password: string): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Erro ao registrar' }));
-    
-    // Tratar mensagens de erro do backend (pode ser array ou string)
-    let errorMessage = 'Erro ao registrar';
-    if (error.message) {
-      if (Array.isArray(error.message)) {
-        // Se for array de mensagens de validação, juntar todas
-        errorMessage = error.message.join(', ');
-      } else {
-        errorMessage = error.message;
-      }
-    }
-    
-    console.error('[frontend] Registration error:', {
-      status: response.status,
-      error: error,
-      message: errorMessage,
+  const url = `${API_BASE_URL}/auth/register`;
+  console.log('[frontend] Attempting to register user:', { email, name, url });
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
     });
-    
-    throw new Error(errorMessage);
-  }
 
-  const data = await response.json();
-  localStorage.setItem('token', data.access_token);
-  localStorage.setItem('user', JSON.stringify(data.user));
-  return data;
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Erro ao registrar' }));
+      
+      // Tratar mensagens de erro do backend (pode ser array ou string)
+      let errorMessage = 'Erro ao registrar';
+      if (error.message) {
+        if (Array.isArray(error.message)) {
+          // Se for array de mensagens de validação, juntar todas
+          errorMessage = error.message.join(', ');
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      console.error('[frontend] Registration error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: error,
+        message: errorMessage,
+        url: url,
+      });
+      
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    console.log('[frontend] Registration successful:', { email: data.user?.email });
+    localStorage.setItem('token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    return data;
+  } catch (error) {
+    // Tratar erros de rede/CORS
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('[frontend] Network error during registration:', {
+        error: error.message,
+        url: url,
+        apiBaseUrl: API_BASE_URL,
+        possibleCauses: [
+          'CORS está bloqueando a requisição',
+          'Backend não está acessível',
+          'URL do backend está incorreta',
+          'Verifique se VITE_API_URL está configurado corretamente',
+        ],
+      });
+      throw new Error(
+        `Não foi possível conectar ao servidor. Verifique se o backend está rodando e se a URL está correta (${API_BASE_URL}). ` +
+        `Se estiver em produção, verifique as configurações de CORS no backend.`
+      );
+    }
+    // Re-lançar outros erros
+    throw error;
+  }
 }
 
 export function logout() {

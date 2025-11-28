@@ -47,6 +47,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
+      origin: request.headers.origin || 'no-origin',
       message: typeof message === 'string' ? message : JSON.stringify(message),
       ...(isDevelopment && {
         stack: exception instanceof Error ? exception.stack : undefined,

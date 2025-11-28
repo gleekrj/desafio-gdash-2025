@@ -41,15 +41,38 @@ async function bootstrap() {
   // Configurar CORS adequadamente
   const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
   
+  // Validar se FRONTEND_URL é uma URL válida
+  if (config.FRONTEND_URL && !config.FRONTEND_URL.startsWith('http://') && !config.FRONTEND_URL.startsWith('https://')) {
+    console.warn(`[backend] ⚠️  FRONTEND_URL parece inválida: "${config.FRONTEND_URL}". Deve ser uma URL completa (ex: https://seu-frontend.com)`);
+  }
+  
+  // Em desenvolvimento, permitir localhost também
+  const allowedOrigins = config.NODE_ENV === 'production' 
+    ? [frontendUrl] 
+    : [frontendUrl, 'http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
+  
   app.enableCors({
-    origin: frontendUrl,
+    origin: (origin, callback) => {
+      // Permitir requisições sem origin (ex: Postman, curl)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Verificar se a origem está na lista permitida
+      if (allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed))) {
+        callback(null, true);
+      } else {
+        console.warn(`[backend] ⚠️  CORS bloqueado para origem: ${origin}. Permitidas: ${allowedOrigins.join(', ')}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Content-Type'],
   });
   
-  console.log(`[backend] CORS configured for: ${frontendUrl}`);
+  console.log(`[backend] CORS configured for: ${allowedOrigins.join(', ')}`);
 
   // Aplicar exception filter global
   app.useGlobalFilters(new HttpExceptionFilter());
