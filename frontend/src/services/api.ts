@@ -20,8 +20,9 @@ export interface LoginResponse {
 }
 
 export interface WeatherInsights {
+  message?: string; // Presente quando não há dados suficientes
   summary: string;
-  statistics: {
+  statistics?: {
     averageTemperature: number;
     averageHumidity: number;
     maxTemperature: number;
@@ -30,10 +31,10 @@ export interface WeatherInsights {
     minHumidity: number;
     temperatureTrend: string;
   };
-  comfortScore: number;
-  dayClassification: string;
-  alerts: string[];
-  dataPoints: number;
+  comfortScore?: number;
+  dayClassification?: string;
+  alerts?: string[];
+  dataPoints?: number;
 }
 
 /**

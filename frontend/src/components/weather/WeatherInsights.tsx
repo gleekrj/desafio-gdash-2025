@@ -12,6 +12,23 @@ export function WeatherInsightsComponent({ insights }: WeatherInsightsProps) {
     return null;
   }
 
+  // Verificar se há dados suficientes (quando não há, o backend retorna apenas message e summary)
+  // Se não tiver statistics, significa que não há dados suficientes
+  const hasInsufficientData = !insights.statistics;
+
+  if (hasInsufficientData) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Insights de IA</h2>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-sm text-yellow-900">
+            {insights.summary || insights.message || 'Dados insuficientes para gerar insights'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <h2 className="text-xl font-semibold text-gray-800 mb-4">Insights de IA</h2>
@@ -35,7 +52,7 @@ export function WeatherInsightsComponent({ insights }: WeatherInsightsProps) {
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Tendência</h3>
             <p className="text-lg font-semibold text-gray-800 capitalize">
-              {insights.statistics.temperatureTrend}
+              {insights.statistics?.temperatureTrend || 'N/A'}
             </p>
           </div>
         </div>
@@ -51,32 +68,34 @@ export function WeatherInsightsComponent({ insights }: WeatherInsightsProps) {
             </ul>
           </div>
         )}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <p className="text-gray-600">Temp. Média</p>
-            <p className="font-semibold">
-              {insights.statistics.averageTemperature.toFixed(1)}°C
-            </p>
+        {insights.statistics && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <p className="text-gray-600">Temp. Média</p>
+              <p className="font-semibold">
+                {insights.statistics.averageTemperature?.toFixed(1) || 'N/A'}°C
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-600">Umidade Média</p>
+              <p className="font-semibold">
+                {insights.statistics.averageHumidity?.toFixed(1) || 'N/A'}%
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-600">Temp. Máx</p>
+              <p className="font-semibold">
+                {insights.statistics.maxTemperature?.toFixed(1) || 'N/A'}°C
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-600">Temp. Mín</p>
+              <p className="font-semibold">
+                {insights.statistics.minTemperature?.toFixed(1) || 'N/A'}°C
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-gray-600">Umidade Média</p>
-            <p className="font-semibold">
-              {insights.statistics.averageHumidity.toFixed(1)}%
-            </p>
-          </div>
-          <div>
-            <p className="text-gray-600">Temp. Máx</p>
-            <p className="font-semibold">
-              {insights.statistics.maxTemperature.toFixed(1)}°C
-            </p>
-          </div>
-          <div>
-            <p className="text-gray-600">Temp. Mín</p>
-            <p className="font-semibold">
-              {insights.statistics.minTemperature.toFixed(1)}°C
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
