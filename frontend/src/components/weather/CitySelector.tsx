@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BRAZILIAN_CAPITALS, BrazilianCapital, DEFAULT_CAPITAL } from '../../utils/brazilian-capitals';
+import { BRAZILIAN_CAPITALS, BrazilianCapital } from '../../utils/brazilian-capitals';
 
 interface CitySelectorProps {
   selectedCity: BrazilianCapital;

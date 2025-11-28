@@ -266,7 +266,7 @@ export default function Users() {
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    disabled={editingUser && editingUser.role === 'admin' && adminCount <= 1}
+                    disabled={editingUser ? (editingUser.role === 'admin' && adminCount <= 1) : false}
                   >
                     <option value="user">Usuário</option>
                     <option value="admin">Administrador</option>

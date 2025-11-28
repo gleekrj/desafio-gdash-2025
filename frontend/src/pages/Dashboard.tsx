@@ -71,12 +71,12 @@ function Dashboard() {
     cityFilter,
     startDate,
     endDate,
+    setPage,
     setGoToPageInput,
     setCityFilter,
     setStartDate,
     setEndDate,
     applyFilters,
-    clearFilters,
     handlePageChange,
     handleLimitChange,
     handleGoToPage,
@@ -115,7 +115,7 @@ function Dashboard() {
     setTopLogsLoading(true);
     try {
       const data = await getWeatherLogsPaginated(1, 100, city); // Buscar mais registros para os componentes do topo
-      const logsArray = ensureArray(data.data || []);
+      const logsArray = ensureArray<WeatherLog>(data.data || []);
       setTopLogs(logsArray);
     } catch (err) {
       console.error('[frontend] Error fetching top logs:', err);
@@ -266,7 +266,6 @@ function Dashboard() {
 
                 <WeatherPagination
                   pagination={pagination}
-                  page={page}
                   limit={limit}
                   goToPageInput={goToPageInput}
                   loading={loading}

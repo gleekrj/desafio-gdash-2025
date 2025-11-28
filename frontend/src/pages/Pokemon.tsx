@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Navigation } from "../components/Navigation";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -72,7 +71,6 @@ export default function Pokemon() {
   const [searchName, setSearchName] = useState("");
   const [activeSearch, setActiveSearch] = useState(""); // Termo de busca ativo
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchPokemon();

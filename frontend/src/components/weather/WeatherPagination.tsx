@@ -5,7 +5,6 @@ import { PaginatedWeatherLogs } from '../../services/api';
 
 interface WeatherPaginationProps {
   pagination: PaginatedWeatherLogs | null;
-  page: number;
   limit: number;
   goToPageInput: string;
   loading: boolean;
@@ -20,7 +19,6 @@ interface WeatherPaginationProps {
  */
 export function WeatherPagination({
   pagination,
-  page,
   limit,
   goToPageInput,
   loading,

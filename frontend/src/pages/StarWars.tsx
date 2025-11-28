@@ -477,7 +477,9 @@ export default function StarWars() {
                           {key.replace(/_/g, " ")}:
                         </span>
                         <span className="text-gray-900">
-                          {value || "N/A"}
+                          {typeof value === 'object' && value !== null && Object.keys(value).length === 0 
+                            ? "N/A" 
+                            : String(value || "N/A")}
                         </span>
                       </div>
                     ))}

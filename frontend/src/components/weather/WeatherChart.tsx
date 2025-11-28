@@ -28,10 +28,22 @@ export function WeatherChart({ chartData }: WeatherChartProps) {
     );
   }
 
-  const chartOptions =
-    chartType === 'radar'
-      ? { ...defaultChartOptions, scales: undefined }
-      : defaultChartOptions;
+  const radarOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: false,
+      },
+    },
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -64,9 +76,9 @@ export function WeatherChart({ chartData }: WeatherChartProps) {
         </div>
       </div>
       <div className="h-96">
-        {chartType === 'line' && <Line data={chartData} options={chartOptions} />}
-        {chartType === 'bar' && <Bar data={chartData} options={chartOptions} />}
-        {chartType === 'radar' && <Radar data={chartData} options={chartOptions} />}
+        {chartType === 'line' && <Line data={chartData} options={defaultChartOptions} />}
+        {chartType === 'bar' && <Bar data={chartData} options={defaultChartOptions} />}
+        {chartType === 'radar' && <Radar data={chartData} options={radarOptions} />}
       </div>
     </div>
   );
