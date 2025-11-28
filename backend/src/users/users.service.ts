@@ -24,27 +24,42 @@ export class UsersService {
    * @throws HttpException se o email já estiver em uso
    */
   async create(createUserDto: CreateUserDto): Promise<User> {
-    // Verificar se email já existe
-    const existingUser = await this.userModel.findOne({ email: createUserDto.email });
-    if (existingUser) {
-      throw new HttpException('Email já está em uso', HttpStatus.CONFLICT);
+    try {
+      // Verificar se email já existe
+      const existingUser = await this.userModel.findOne({ email: createUserDto.email });
+      if (existingUser) {
+        console.log('[backend][users] User creation failed: email already exists', createUserDto.email);
+        throw new HttpException('Email já está em uso', HttpStatus.CONFLICT);
+      }
+
+      // Hash da senha
+      const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+
+      const user = new this.userModel({
+        ...createUserDto,
+        password: hashedPassword,
+      });
+
+      console.log('[backend][users] Creating user:', createUserDto.email);
+      const savedUser = await user.save();
+      
+      // Remover senha do retorno
+      const userObj = savedUser.toObject();
+      delete userObj.password;
+      return userObj as User;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      // Log detalhado do erro antes de lançar exceção genérica
+      console.error('[backend][users] User creation failed (unexpected error):', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        email: createUserDto.email,
+        name: createUserDto.name,
+      });
+      throw new HttpException('Erro ao criar usuário', HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-
-    const user = new this.userModel({
-      ...createUserDto,
-      password: hashedPassword,
-    });
-
-    console.log('[backend][users] Creating user:', createUserDto.email);
-    const savedUser = await user.save();
-    
-    // Remover senha do retorno
-    const userObj = savedUser.toObject();
-    delete userObj.password;
-    return userObj as User;
   }
 
   /**

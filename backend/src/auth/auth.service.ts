@@ -52,8 +52,19 @@ export class AuthService {
       };
     } catch (error) {
       if (error instanceof HttpException) {
+        console.log('[backend][auth] Registration failed (HttpException):', {
+          status: error.getStatus(),
+          message: error.message,
+          response: error.getResponse(),
+        });
         throw error;
       }
+      // Log detalhado do erro antes de lançar exceção genérica
+      console.error('[backend][auth] Registration failed (unexpected error):', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        registerDto: { ...registerDto, password: '[REDACTED]' }, // Não logar senha
+      });
       throw new HttpException('Erro ao registrar usuário', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }

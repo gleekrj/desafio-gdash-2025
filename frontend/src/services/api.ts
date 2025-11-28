@@ -128,7 +128,25 @@ export async function register(name: string, email: string, password: string): P
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Erro ao registrar' }));
-    throw new Error(error.message || 'Erro ao registrar');
+    
+    // Tratar mensagens de erro do backend (pode ser array ou string)
+    let errorMessage = 'Erro ao registrar';
+    if (error.message) {
+      if (Array.isArray(error.message)) {
+        // Se for array de mensagens de validação, juntar todas
+        errorMessage = error.message.join(', ');
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    console.error('[frontend] Registration error:', {
+      status: response.status,
+      error: error,
+      message: errorMessage,
+    });
+    
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
