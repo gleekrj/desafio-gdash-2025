@@ -19,6 +19,9 @@ export function formatToISO(date: Date = new Date()): string {
  * @returns true se for uma data válida
  */
 export function isValidISODate(dateString: string): boolean {
+  if (!dateString || typeof dateString !== 'string') {
+    return false;
+  }
   const date = new Date(dateString);
   return !isNaN(date.getTime()) && dateString.includes('T');
 }
@@ -31,7 +34,11 @@ export function isValidISODate(dateString: string): boolean {
  */
 export function formatToBrazilian(dateString: string): string {
   try {
-    return new Date(dateString).toLocaleString('pt-BR');
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString;
+    }
+    return date.toLocaleString('pt-BR');
   } catch {
     return dateString;
   }

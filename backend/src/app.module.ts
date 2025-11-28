@@ -33,21 +33,22 @@ console.log('[backend] MongoDB URI:', mongoUri.replace(/\/\/.*@/, '//***@')); //
   imports: [
     LoggerModule,
     // Rate limiting - diferentes limites para autenticado vs não autenticado
+    // Aumentado para suportar múltiplas requisições do Dashboard ao montar
     ThrottlerModule.forRoot([
       {
         name: 'short',
         ttl: 60000, // 1 minuto
-        limit: 10, // 10 requisições por minuto (não autenticado)
+        limit: 60, // 60 requisições por minuto (não autenticado) - aumentado de 10
       },
       {
         name: 'medium',
         ttl: 60000, // 1 minuto
-        limit: 30, // 30 requisições por minuto (autenticado)
+        limit: 120, // 120 requisições por minuto (autenticado) - aumentado de 30
       },
       {
         name: 'long',
         ttl: 3600000, // 1 hora
-        limit: 100, // 100 requisições por hora
+        limit: 1000, // 1000 requisições por hora - aumentado de 100
       },
     ]),
     MongooseModule.forRoot(mongoUri, {

@@ -94,12 +94,47 @@ function Dashboard() {
     localStorage.setItem('selectedCity', selectedCity);
   }, [selectedCity]);
 
-  // Carregar dados iniciais
+  // Carregar dados iniciais - usar flag para evitar requisições duplicadas
   useEffect(() => {
-    fetchLogs(1, 10); // Listagem sem filtros iniciais
-    fetchTopLogs(selectedCity); // Dados do topo baseados na cidade selecionada
-    fetchInsights(selectedCity);
-    fetchAvailableCities();
+    let isMounted = true;
+    
+    const loadInitialData = async () => {
+      if (!isMounted) return;
+      
+      // Sequencial para evitar sobrecarregar o rate limiting
+      try {
+        await fetchLogs(1, 10); // Listagem sem filtros iniciais
+      } catch (err) {
+        console.error('[frontend] Error in initial fetchLogs:', err);
+      }
+      
+      if (!isMounted) return;
+      try {
+        await fetchTopLogs(selectedCity); // Dados do topo baseados na cidade selecionada
+      } catch (err) {
+        console.error('[frontend] Error in initial fetchTopLogs:', err);
+      }
+      
+      if (!isMounted) return;
+      try {
+        await fetchInsights(selectedCity);
+      } catch (err) {
+        console.error('[frontend] Error in initial fetchInsights:', err);
+      }
+      
+      if (!isMounted) return;
+      try {
+        await fetchAvailableCities();
+      } catch (err) {
+        console.error('[frontend] Error in initial fetchAvailableCities:', err);
+      }
+    };
+    
+    loadInitialData();
+    
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -117,8 +152,16 @@ function Dashboard() {
       const data = await getWeatherLogsPaginated(1, 100, city); // Buscar mais registros para os componentes do topo
       const logsArray = ensureArray<WeatherLog>(data.data || []);
       setTopLogs(logsArray);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[frontend] Error fetching top logs:', err);
+      const errorMessage = err?.message || 'Erro ao buscar logs';
+      if (err?.status === 429 || errorMessage.includes('429') || errorMessage.includes('Muitas requisições')) {
+        toast({
+          title: 'Muitas requisições',
+          description: 'Por favor, aguarde um momento antes de tentar novamente.',
+          variant: 'destructive',
+        });
+      }
       setTopLogs([]);
     } finally {
       setTopLogsLoading(false);
@@ -129,8 +172,16 @@ function Dashboard() {
     try {
       const cities = await getAvailableCities();
       setAvailableCities(cities);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[frontend] Error fetching available cities:', err);
+      const errorMessage = err?.message || 'Erro ao buscar cidades';
+      if (err?.status === 429 || errorMessage.includes('429') || errorMessage.includes('Muitas requisições')) {
+        toast({
+          title: 'Muitas requisições',
+          description: 'Por favor, aguarde um momento antes de tentar novamente.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -138,8 +189,16 @@ function Dashboard() {
     try {
       const data = await getWeatherInsights(city);
       setInsights(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[frontend] Error fetching insights:', err);
+      const errorMessage = err?.message || 'Erro ao buscar insights';
+      if (err?.status === 429 || errorMessage.includes('429') || errorMessage.includes('Muitas requisições')) {
+        toast({
+          title: 'Muitas requisições',
+          description: 'Por favor, aguarde um momento antes de tentar novamente.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -176,14 +235,14 @@ function Dashboard() {
   const hasActiveFilters = !!(cityFilter || startDate || endDate);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
         <header className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">Weather Dashboard</h1>
-              <p className="text-gray-600">Visualização dos últimos logs climáticos</p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Weather Dashboard</h1>
+              <p className="text-muted-foreground">Visualização dos últimos logs climáticos</p>
             </div>
             <div className="flex items-center">
               <CitySelector selectedCity={selectedCity} onCityChange={handleCityChange} />
@@ -213,19 +272,19 @@ function Dashboard() {
 
         {/* Estados de Loading e Erro */}
         {loading && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-4">
+          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 px-4 py-3 rounded-lg mb-4">
             Carregando dados...
           </div>
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4">
+          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg mb-4">
             <strong>Erro:</strong> {error}
           </div>
         )}
 
         {!loading && !error && safeLogs.length === 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
+          <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 px-4 py-3 rounded-lg mb-4">
             {cityFilter
               ? `Nenhum log encontrado para a cidade "${cityFilter}".`
               : 'Nenhum log encontrado.'}
@@ -234,9 +293,9 @@ function Dashboard() {
 
         {/* 5 - Dados Climáticos (Filtros, Listagem, Paginação e Exportação) */}
         {!loading && !error && (
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="bg-card rounded-lg shadow-md p-4 mb-6 border border-border">
             <div className="flex gap-2 flex-wrap items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Dados Climáticos</h3>
+              <h3 className="text-lg font-semibold text-foreground">Dados Climáticos</h3>
               <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm">
                 {loading ? 'Carregando...' : 'Atualizar'}
               </Button>
@@ -275,9 +334,9 @@ function Dashboard() {
                   onGoToPage={handleGoToPageWithToast}
                 />
 
-                <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="mt-6 pt-6 border-t border-border">
                   <div className="flex gap-2 flex-wrap items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-800">Exportação</h3>
+                    <h3 className="text-lg font-semibold text-foreground">Exportação</h3>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"

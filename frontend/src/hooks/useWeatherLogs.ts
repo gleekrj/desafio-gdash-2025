@@ -48,10 +48,17 @@ export function useWeatherLogs() {
             ? (paginationData as PaginatedWeatherLogs)
             : null
         );
-      } catch (err) {
+      } catch (err: any) {
         const errorMessage =
           err instanceof Error ? err.message : 'Erro ao buscar logs';
-        setError(errorMessage);
+        
+        // Tratamento específico para erro 429 (rate limiting)
+        if (err?.status === 429 || errorMessage.includes('429') || errorMessage.includes('Muitas requisições')) {
+          setError('Muitas requisições. Por favor, aguarde um momento antes de tentar novamente.');
+        } else {
+          setError(errorMessage);
+        }
+        
         console.error('[frontend] Error fetching logs:', err);
         setLogs([]);
         setPagination(null);

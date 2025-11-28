@@ -6,6 +6,7 @@ export interface IUser {
   password: string;
   name: string;
   role?: string;
+  theme?: string;
 }
 
 export type UserDocument = User & Document;
@@ -23,6 +24,9 @@ export class User implements IUser {
 
   @Prop({ default: 'user' })
   role?: string;
+
+  @Prop({ enum: ['light', 'dark'], default: undefined })
+  theme?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

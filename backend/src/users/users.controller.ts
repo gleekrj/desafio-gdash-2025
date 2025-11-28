@@ -6,15 +6,19 @@ import {
   Patch,
   Param,
   Delete,
+  Put,
   UseGuards,
   HttpCode,
   HttpStatus,
+  HttpException,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateThemeDto } from './dto/update-theme.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
 
@@ -83,6 +87,56 @@ export class UsersController {
   async remove(@Param('id') id: string) {
     console.log('[backend][users] DELETE /users/:id - Deleting user:', id);
     await this.usersService.remove(id);
+  }
+
+  @Put(':id/theme')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Atualizar preferência de tema do usuário' })
+  @ApiResponse({ status: 200, description: 'Tema atualizado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 403, description: 'Acesso negado - você só pode atualizar seu próprio tema' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
+  async updateTheme(@Param('id') id: string, @Body() updateThemeDto: UpdateThemeDto, @Request() req: any) {
+    console.log('[backend][users] PUT /users/:id/theme - Updating theme for user:', id);
+    // Verificar se o usuário pode atualizar (próprio usuário ou admin)
+    const currentUser = req.user;
+    const userId = (currentUser._id || currentUser.id)?.toString();
+    const isOwnUser = userId === id;
+    const isAdmin = currentUser.role === 'admin';
+
+    if (!isOwnUser && !isAdmin) {
+      throw new HttpException(
+        'Você só pode atualizar seu próprio tema',
+        HttpStatus.FORBIDDEN
+      );
+    }
+
+    const updatedUser = await this.usersService.updateTheme(id, updateThemeDto.theme);
+    return { theme: updatedUser.theme };
+  }
+
+  @Get(':id/theme')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Obter preferência de tema do usuário' })
+  @ApiResponse({ status: 200, description: 'Tema retornado com sucesso' })
+  @ApiResponse({ status: 403, description: 'Acesso negado - você só pode consultar seu próprio tema' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
+  async getTheme(@Param('id') id: string, @Request() req: any) {
+    console.log('[backend][users] GET /users/:id/theme - Fetching theme for user:', id);
+    // Verificar se o usuário pode consultar (próprio usuário ou admin)
+    const currentUser = req.user;
+    const userId = (currentUser._id || currentUser.id)?.toString();
+    const isOwnUser = userId === id;
+    const isAdmin = currentUser.role === 'admin';
+
+    if (!isOwnUser && !isAdmin) {
+      throw new HttpException(
+        'Você só pode consultar seu próprio tema',
+        HttpStatus.FORBIDDEN
+      );
+    }
+
+    return this.usersService.getTheme(id);
   }
 }
 

@@ -5,6 +5,7 @@ import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateThemeDto } from './dto/update-theme.dto';
 import * as bcrypt from 'bcrypt';
 
 /**
@@ -179,6 +180,46 @@ export class UsersService {
 
     console.log('[backend][users] Deleting user:', id);
     await this.userModel.findByIdAndDelete(id).exec();
+  }
+
+  /**
+   * Atualiza a preferência de tema do usuário
+   *
+   * @param userId - ID do usuário
+   * @param theme - Tema a ser aplicado ('light' ou 'dark')
+   * @returns Usuário atualizado (sem senha)
+   * @throws HttpException se o usuário não for encontrado
+   */
+  async updateTheme(userId: string, theme: 'light' | 'dark'): Promise<User> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    console.log('[backend][users] Updating theme for user:', userId, 'to:', theme);
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(userId, { theme }, { new: true })
+      .exec();
+
+    const userObj = updatedUser.toObject();
+    delete userObj.password;
+    return userObj as User;
+  }
+
+  /**
+   * Obtém a preferência de tema do usuário
+   *
+   * @param userId - ID do usuário
+   * @returns Preferência de tema do usuário ou null se não definida
+   * @throws HttpException se o usuário não for encontrado
+   */
+  async getTheme(userId: string): Promise<{ theme: 'light' | 'dark' | null }> {
+    const user = await this.userModel.findById(userId).select('theme').exec();
+    if (!user) {
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    return { theme: (user.theme as 'light' | 'dark' | undefined) || null };
   }
 }
 

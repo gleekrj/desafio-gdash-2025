@@ -190,13 +190,13 @@ export default function Pokemon() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Pokémon</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-6">Pokémon</h1>
 
         <div className="mb-6">
-          <Label htmlFor="search-pokemon" className="text-sm font-medium text-gray-700 mb-2 block">
+          <Label htmlFor="search-pokemon" className="text-sm font-medium text-foreground mb-2 block">
             Pesquisar por nome:
           </Label>
           <div className="flex gap-2 max-w-md">
@@ -219,7 +219,7 @@ export default function Pokemon() {
             )}
           </div>
           {activeSearch && (
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               Pesquisando por: <span className="font-semibold">{activeSearch}</span>
             </p>
           )}
@@ -230,7 +230,7 @@ export default function Pokemon() {
         ) : (
           <>
             {activeSearch.trim() && pokemonList.length === 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
+              <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 px-4 py-3 rounded-lg mb-4">
                 Nenhum Pokémon encontrado com o nome "{activeSearch}"
               </div>
             )}
@@ -238,7 +238,7 @@ export default function Pokemon() {
               {pokemonList.map((pokemon) => (
                 <div
                   key={pokemon.id}
-                  className="bg-white rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition"
+                  className="bg-card border border-border rounded-lg shadow-md p-4 cursor-pointer hover:shadow-lg transition"
                   onClick={() => fetchPokemonDetails(pokemon.id)}
                 >
                   <div className="text-center">
@@ -248,19 +248,19 @@ export default function Pokemon() {
                       className="mx-auto mb-2"
                       style={{ width: '96px', height: '96px' }}
                     />
-                    <p className="text-sm text-gray-500 mb-1">#{pokemon.id}</p>
-                    <h3 className="font-bold text-lg capitalize">{pokemon.name}</h3>
+                    <p className="text-sm text-muted-foreground mb-1">#{pokemon.id}</p>
+                    <h3 className="font-bold text-lg capitalize text-foreground">{pokemon.name}</h3>
                     <div className="flex gap-2 justify-center mt-2">
                       {pokemon.types.map((type) => (
                         <span
                           key={type}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize"
+                          className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs capitalize"
                         >
                           {type}
                         </span>
                       ))}
                     </div>
-                    <p className="text-sm text-gray-600 mt-2">
+                    <p className="text-sm text-muted-foreground mt-2">
                       Altura: {pokemon.height / 10}m | Peso: {pokemon.weight / 10}kg
                     </p>
                   </div>
@@ -269,18 +269,18 @@ export default function Pokemon() {
             </div>
 
             {pagination && (
-              <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+              <div className="bg-card border border-border rounded-lg shadow-md p-4 mb-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-muted-foreground">
                       Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                       {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}
                       {pagination.total} registros
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="text-sm">Itens por página:</label>
+                      <label className="text-sm text-foreground">Itens por página:</label>
                       <select
-                        className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                        className="px-3 py-1 border border-input bg-background rounded-md text-sm text-foreground"
                         value={limit}
                         onChange={(e) => handleLimitChange(Number(e.target.value))}
                       >
@@ -300,7 +300,7 @@ export default function Pokemon() {
                       >
                         Anterior
                       </Button>
-                      <span className="text-sm text-gray-600 px-2 flex items-center">
+                      <span className="text-sm text-muted-foreground px-2 flex items-center">
                         Página {pagination.page} de {pagination.totalPages}
                       </span>
                       <Button
@@ -349,11 +349,11 @@ export default function Pokemon() {
 
         {showDetails && selectedPokemon && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-card border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">#{selectedPokemon.id}</p>
-                  <h2 className="text-2xl font-bold capitalize">{selectedPokemon.name}</h2>
+                  <p className="text-sm text-muted-foreground mb-1">#{selectedPokemon.id}</p>
+                  <h2 className="text-2xl font-bold capitalize text-foreground">{selectedPokemon.name}</h2>
                 </div>
                 <Button variant="outline" onClick={() => setShowDetails(false)}>
                   Fechar
@@ -369,35 +369,35 @@ export default function Pokemon() {
                   />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Informações</h3>
-                  <p>Altura: {selectedPokemon.height / 10}m</p>
-                  <p>Peso: {selectedPokemon.weight / 10}kg</p>
-                  <p className="mt-2">
+                  <h3 className="font-semibold mb-2 text-foreground">Informações</h3>
+                  <p className="text-muted-foreground">Altura: {selectedPokemon.height / 10}m</p>
+                  <p className="text-muted-foreground">Peso: {selectedPokemon.weight / 10}kg</p>
+                  <p className="mt-2 text-muted-foreground">
                     Tipos: {selectedPokemon.types.map((t) => t).join(", ")}
                   </p>
-                  <p className="mt-2">
+                  <p className="mt-2 text-muted-foreground">
                     Habilidades: {selectedPokemon.abilities.join(", ")}
                   </p>
                 </div>
               </div>
               <div className="mt-4">
-                <h3 className="font-semibold mb-2">Estatísticas</h3>
+                <h3 className="font-semibold mb-2 text-foreground">Estatísticas</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {selectedPokemon.stats.map((stat) => (
                     <div key={stat.name} className="flex justify-between">
-                      <span className="capitalize">{stat.name}:</span>
-                      <span className="font-semibold">{stat.value}</span>
+                      <span className="capitalize text-foreground">{stat.name}:</span>
+                      <span className="font-semibold text-foreground">{stat.value}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="mt-4">
-                <h3 className="font-semibold mb-2">Movimentos (primeiros 10)</h3>
+                <h3 className="font-semibold mb-2 text-foreground">Movimentos (primeiros 10)</h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedPokemon.moves.map((move) => (
                     <span
                       key={move}
-                      className="px-2 py-1 bg-gray-100 rounded text-sm capitalize"
+                      className="px-2 py-1 bg-muted rounded text-sm capitalize text-foreground"
                     >
                       {move}
                     </span>

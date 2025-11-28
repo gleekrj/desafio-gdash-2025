@@ -261,35 +261,35 @@ export default function StarWars() {
     };
 
     return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-xl font-semibold">{resourceLabels[resourceType]}</h2>
+      <div className="bg-card border border-border rounded-lg shadow-md overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-xl font-semibold text-foreground">{resourceLabels[resourceType]}</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
                 {headers.map((header) => (
                   <th
                     key={header}
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                   >
                     {header.replace(/_/g, " ")}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {data.map((item, index) => (
                 <tr 
                   key={index} 
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="hover:bg-accent cursor-pointer transition-colors"
                   onClick={() => item.url && fetchItemDetails(item.url)}
                 >
                   {headers.map((header) => (
                     <td
                       key={header}
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                      className="px-6 py-4 whitespace-nowrap text-sm text-foreground"
                     >
                       {item[header] || "-"}
                     </td>
@@ -304,13 +304,13 @@ export default function StarWars() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Star Wars</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-6">Star Wars</h1>
 
         <div className="mb-6">
-          <Label htmlFor="search-starwars" className="text-sm font-medium text-gray-700 mb-2 block">
+          <Label htmlFor="search-starwars" className="text-sm font-medium text-foreground mb-2 block">
             Pesquisar por nome:
           </Label>
           <div className="flex gap-2 max-w-md mb-4">
@@ -333,7 +333,7 @@ export default function StarWars() {
             )}
           </div>
           {activeSearch && (
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Pesquisando por: <span className="font-semibold">{activeSearch}</span>
             </p>
           )}
@@ -380,25 +380,25 @@ export default function StarWars() {
         ) : (
           <>
             {activeSearch.trim() && data.length === 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
+              <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 px-4 py-3 rounded-lg mb-4">
                 Nenhum resultado encontrado com o nome "{activeSearch}"
               </div>
             )}
             {renderTable()}
 
             {pagination && (
-              <div className="bg-white rounded-lg shadow-md p-4 mt-6">
+              <div className="bg-card border border-border rounded-lg shadow-md p-4 mt-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-muted-foreground">
                       Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                       {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}
                       {pagination.total} registros
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="text-sm">Itens por página:</label>
+                      <label className="text-sm text-foreground">Itens por página:</label>
                       <select
-                        className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                        className="px-3 py-1 border border-input bg-background rounded-md text-sm text-foreground"
                         value={limit}
                         onChange={(e) => handleLimitChange(Number(e.target.value))}
                       >
@@ -418,7 +418,7 @@ export default function StarWars() {
                       >
                         Anterior
                       </Button>
-                      <span className="text-sm text-gray-600 px-2 flex items-center">
+                      <span className="text-sm text-muted-foreground px-2 flex items-center">
                         Página {pagination.page} de {pagination.totalPages}
                       </span>
                       <Button
@@ -467,15 +467,15 @@ export default function StarWars() {
 
         {showDetails && selectedItem && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-card border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold">{selectedItem.name}</h2>
+                <h2 className="text-2xl font-bold text-foreground">{selectedItem.name}</h2>
                 <Button variant="outline" onClick={() => setShowDetails(false)}>
                   Fechar
                 </Button>
               </div>
               {loadingDetails ? (
-                <div className="text-center py-8">Carregando detalhes...</div>
+                <div className="text-center py-8 text-foreground">Carregando detalhes...</div>
               ) : (
                 <div className="space-y-4">
                   {Object.entries(selectedItem)
@@ -488,11 +488,11 @@ export default function StarWars() {
                       !Array.isArray(selectedItem[key])
                     )
                     .map(([key, value]) => (
-                      <div key={key} className="flex justify-between border-b pb-2">
-                        <span className="font-semibold capitalize text-gray-700">
+                      <div key={key} className="flex justify-between border-b border-border pb-2">
+                        <span className="font-semibold capitalize text-foreground">
                           {key.replace(/_/g, " ")}:
                         </span>
-                        <span className="text-gray-900">
+                        <span className="text-muted-foreground">
                           {typeof value === 'object' && value !== null && Object.keys(value).length === 0 
                             ? "N/A" 
                             : String(value || "N/A")}
@@ -502,11 +502,11 @@ export default function StarWars() {
                   
                   {/* Homeworld (apenas para pessoas) */}
                   {selectedItem.homeworld && (
-                    <div className="flex justify-between border-b pb-2">
-                      <span className="font-semibold capitalize text-gray-700">
+                    <div className="flex justify-between border-b border-border pb-2">
+                      <span className="font-semibold capitalize text-foreground">
                         Homeworld:
                       </span>
-                      <span className="text-gray-900">
+                      <span className="text-muted-foreground">
                         {resolvedNames.homeworld || "Carregando..."}
                       </span>
                     </div>
@@ -515,21 +515,21 @@ export default function StarWars() {
                   {/* Filmes */}
                   {selectedItem.films && Array.isArray(selectedItem.films) && selectedItem.films.length > 0 && (
                     <div className="mt-4">
-                      <h3 className="font-semibold mb-2">Filmes ({selectedItem.films.length})</h3>
+                      <h3 className="font-semibold mb-2 text-foreground">Filmes ({selectedItem.films.length})</h3>
                       <div className="max-h-32 overflow-y-auto">
                         {resolvedNames.films && resolvedNames.films.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {resolvedNames.films.map((film, index) => (
                               <span
                                 key={index}
-                                className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
+                                className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-sm"
                               >
                                 {film}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-600">Carregando nomes...</p>
+                          <p className="text-sm text-muted-foreground">Carregando nomes...</p>
                         )}
                       </div>
                     </div>
@@ -545,14 +545,14 @@ export default function StarWars() {
                             {resolvedNames.vehicles.map((vehicle, index) => (
                               <span
                                 key={index}
-                                className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm"
+                                className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-sm"
                               >
                                 {vehicle}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-600">Carregando nomes...</p>
+                          <p className="text-sm text-muted-foreground">Carregando nomes...</p>
                         )}
                       </div>
                     </div>
@@ -568,14 +568,14 @@ export default function StarWars() {
                             {resolvedNames.starships.map((starship, index) => (
                               <span
                                 key={index}
-                                className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-sm"
+                                className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-sm"
                               >
                                 {starship}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-600">Carregando nomes...</p>
+                          <p className="text-sm text-muted-foreground">Carregando nomes...</p>
                         )}
                       </div>
                     </div>
@@ -591,14 +591,14 @@ export default function StarWars() {
                             {resolvedNames.residents.map((resident, index) => (
                               <span
                                 key={index}
-                                className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm"
+                                className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded text-sm"
                               >
                                 {resident}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-600">Carregando nomes...</p>
+                          <p className="text-sm text-muted-foreground">Carregando nomes...</p>
                         )}
                       </div>
                     </div>
@@ -614,14 +614,14 @@ export default function StarWars() {
                             {resolvedNames.pilots.map((pilot, index) => (
                               <span
                                 key={index}
-                                className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-sm"
+                                className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded text-sm"
                               >
                                 {pilot}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-600">Carregando nomes...</p>
+                          <p className="text-sm text-muted-foreground">Carregando nomes...</p>
                         )}
                       </div>
                     </div>

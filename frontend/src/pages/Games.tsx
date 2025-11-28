@@ -160,15 +160,15 @@ export default function Games() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Jogos</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-6">Jogos</h1>
 
         {/* Filtros */}
         <div className="mb-6 space-y-4">
           <div>
-            <Label htmlFor="search-games" className="text-sm font-medium text-gray-700 mb-2 block">
+            <Label htmlFor="search-games" className="text-sm font-medium text-foreground mb-2 block">
               Pesquisar por nome:
             </Label>
             <div className="flex gap-2 max-w-md">
@@ -191,14 +191,14 @@ export default function Games() {
               )}
             </div>
             {activeSearch && (
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-sm text-muted-foreground mt-2">
                 Pesquisando por: <span className="font-semibold">{activeSearch}</span>
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="platform-filter" className="text-sm font-medium text-gray-700 mb-2 block">
+            <Label htmlFor="platform-filter" className="text-sm font-medium text-foreground mb-2 block">
               Filtrar por plataforma:
             </Label>
             <div className="flex gap-2 flex-wrap">
@@ -228,7 +228,7 @@ export default function Games() {
         ) : (
           <>
             {activeSearch.trim() && gamesList.length === 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4">
+              <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 px-4 py-3 rounded-lg mb-4">
                 Nenhum jogo encontrado com o nome "{activeSearch}"
               </div>
             )}
@@ -238,7 +238,7 @@ export default function Games() {
               {gamesList.map((game) => (
                 <div
                   key={game.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition"
+                  className="bg-card border border-border rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition"
                   onClick={() => fetchGameDetails(game.id)}
                 >
                   {game.image && (
@@ -253,8 +253,8 @@ export default function Games() {
                     />
                   )}
                   <div className="p-4">
-                    <h3 className="font-bold text-lg mb-2 line-clamp-2">{game.name}</h3>
-                    <div className="text-sm text-gray-600 mb-2">
+                    <h3 className="font-bold text-lg mb-2 line-clamp-2 text-foreground">{game.name}</h3>
+                    <div className="text-sm text-muted-foreground mb-2">
                       <p>
                         <span className="font-semibold">Rating:</span> {game.rating?.toFixed(1) || "N/A"} / {game.ratingTop || 5}
                       </p>
@@ -269,13 +269,13 @@ export default function Games() {
                         {game.platforms.slice(0, 3).map((platform) => (
                           <span
                             key={platform}
-                            className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                            className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs"
                           >
                             {platform}
                           </span>
                         ))}
                         {game.platforms.length > 3 && (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
+                          <span className="px-2 py-1 bg-muted text-foreground rounded text-xs">
                             +{game.platforms.length - 3}
                           </span>
                         )}
@@ -286,13 +286,13 @@ export default function Games() {
                         {game.genres.slice(0, 2).map((genre) => (
                           <span
                             key={genre}
-                            className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs"
+                            className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-xs"
                           >
                             {genre}
                           </span>
                         ))}
                         {game.genres.length > 2 && (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
+                          <span className="px-2 py-1 bg-muted text-foreground rounded text-xs">
                             +{game.genres.length - 2}
                           </span>
                         )}
@@ -305,18 +305,18 @@ export default function Games() {
 
             {/* Paginação */}
             {pagination && (
-              <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+              <div className="bg-card border border-border rounded-lg shadow-md p-4 mb-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-muted-foreground">
                       Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
                       {Math.min(pagination.page * pagination.limit, pagination.total)} de{" "}
                       {pagination.total} registros
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="text-sm">Itens por página:</label>
+                      <label className="text-sm text-foreground">Itens por página:</label>
                       <select
-                        className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                        className="px-3 py-1 border border-input bg-background rounded-md text-sm text-foreground"
                         value={limit}
                         onChange={(e) => handleLimitChange(Number(e.target.value))}
                       >
@@ -336,7 +336,7 @@ export default function Games() {
                       >
                         Anterior
                       </Button>
-                      <span className="text-sm text-gray-600 px-2 flex items-center">
+                      <span className="text-sm text-muted-foreground px-2 flex items-center">
                         Página {pagination.page} de {pagination.totalPages}
                       </span>
                       <Button
@@ -386,11 +386,11 @@ export default function Games() {
         {/* Modal de Detalhes */}
         {showDetails && selectedGame && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-card border border-border rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h2 className="text-3xl font-bold mb-2">{selectedGame.name}</h2>
-                  <div className="flex gap-4 text-sm text-gray-600">
+                  <h2 className="text-3xl font-bold mb-2 text-foreground">{selectedGame.name}</h2>
+                  <div className="flex gap-4 text-sm text-muted-foreground">
                     {selectedGame.released && (
                       <p>
                         <span className="font-semibold">Lançamento:</span> {formatDate(selectedGame.released)}
@@ -436,8 +436,8 @@ export default function Games() {
                 <div>
                   {selectedGame.description && (
                     <div className="mb-4">
-                      <h3 className="font-semibold mb-2">Descrição</h3>
-                      <p className="text-sm text-gray-700 line-clamp-10">
+                      <h3 className="font-semibold mb-2 text-foreground">Descrição</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-10">
                         {selectedGame.description.replace(/<[^>]*>/g, "")}
                       </p>
                     </div>
@@ -448,7 +448,7 @@ export default function Games() {
               {/* Screenshots */}
               {selectedGame.screenshots && selectedGame.screenshots.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-semibold mb-3">Screenshots</h3>
+                  <h3 className="font-semibold mb-3 text-foreground">Screenshots</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {selectedGame.screenshots.map((screenshot, index) => (
                       <img
@@ -467,12 +467,12 @@ export default function Games() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {selectedGame.platforms && selectedGame.platforms.length > 0 && (
                   <div>
-                    <h3 className="font-semibold mb-2">Plataformas</h3>
+                    <h3 className="font-semibold mb-2 text-foreground">Plataformas</h3>
                     <div className="flex flex-wrap gap-2">
                       {selectedGame.platforms.map((platform: any) => (
                         <span
                           key={platform.name}
-                          className="px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm"
+                          className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-sm"
                         >
                           {platform.name}
                           {platform.releasedAt && ` (${formatDate(platform.releasedAt)})`}
@@ -484,12 +484,12 @@ export default function Games() {
 
                 {selectedGame.genres && selectedGame.genres.length > 0 && (
                   <div>
-                    <h3 className="font-semibold mb-2">Gêneros</h3>
+                    <h3 className="font-semibold mb-2 text-foreground">Gêneros</h3>
                     <div className="flex flex-wrap gap-2">
                       {selectedGame.genres.map((genre) => (
                         <span
                           key={genre}
-                          className="px-3 py-1 bg-purple-100 text-purple-800 rounded text-sm"
+                          className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-sm"
                         >
                           {genre}
                         </span>
@@ -500,12 +500,12 @@ export default function Games() {
 
                 {selectedGame.developers && selectedGame.developers.length > 0 && (
                   <div>
-                    <h3 className="font-semibold mb-2">Desenvolvedores</h3>
+                    <h3 className="font-semibold mb-2 text-foreground">Desenvolvedores</h3>
                     <div className="flex flex-wrap gap-2">
                       {selectedGame.developers.map((developer) => (
                         <span
                           key={developer}
-                          className="px-3 py-1 bg-green-100 text-green-800 rounded text-sm"
+                          className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-sm"
                         >
                           {developer}
                         </span>
@@ -516,12 +516,12 @@ export default function Games() {
 
                 {selectedGame.publishers && selectedGame.publishers.length > 0 && (
                   <div>
-                    <h3 className="font-semibold mb-2">Publicadoras</h3>
+                    <h3 className="font-semibold mb-2 text-foreground">Publicadoras</h3>
                     <div className="flex flex-wrap gap-2">
                       {selectedGame.publishers.map((publisher) => (
                         <span
                           key={publisher}
-                          className="px-3 py-1 bg-orange-100 text-orange-800 rounded text-sm"
+                          className="px-3 py-1 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded text-sm"
                         >
                           {publisher}
                         </span>
@@ -537,7 +537,7 @@ export default function Games() {
                     href={selectedGame.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     Visitar site oficial →
                   </a>

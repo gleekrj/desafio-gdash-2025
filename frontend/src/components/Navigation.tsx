@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "./ui/button";
 import { logout, getCurrentUser } from "../services/api";
+import { ThemeToggle } from "./ThemeToggle/ThemeToggle";
 
 export function Navigation() {
   const navigate = useNavigate();
@@ -43,11 +44,11 @@ export function Navigation() {
   }, [isExtraMenuOpen]);
 
   return (
-    <nav className="bg-white shadow-md mb-6">
+    <nav className="bg-card border-b border-border shadow-md mb-6">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-gray-800">GDASH</h1>
+            <h1 className="text-xl font-bold text-foreground">GDASH</h1>
             <div className="flex gap-2">
               <Button
                 variant={isActive("/dashboard") ? "default" : "ghost"}
@@ -83,14 +84,14 @@ export function Navigation() {
                   </svg>
                 </Button>
                 {isExtraMenuOpen && (
-                  <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px] z-50">
+                  <div className="absolute top-full left-0 mt-1 bg-popover rounded-lg shadow-lg border border-border py-1 min-w-[160px] z-50">
                     <button
                       onClick={() => {
                         navigate("/pokemon");
                         setIsExtraMenuOpen(false);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
-                        isActive("/pokemon") ? "bg-gray-100 font-semibold" : ""
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors text-popover-foreground ${
+                        isActive("/pokemon") ? "bg-accent font-semibold" : ""
                       }`}
                     >
                       Pokemon
@@ -100,8 +101,8 @@ export function Navigation() {
                         navigate("/starwars");
                         setIsExtraMenuOpen(false);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
-                        isActive("/starwars") ? "bg-gray-100 font-semibold" : ""
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors text-popover-foreground ${
+                        isActive("/starwars") ? "bg-accent font-semibold" : ""
                       }`}
                     >
                       Star Wars
@@ -111,8 +112,8 @@ export function Navigation() {
                         navigate("/games");
                         setIsExtraMenuOpen(false);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
-                        isActive("/games") ? "bg-gray-100 font-semibold" : ""
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors text-popover-foreground ${
+                        isActive("/games") ? "bg-accent font-semibold" : ""
                       }`}
                     >
                       Games
@@ -123,8 +124,9 @@ export function Navigation() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             {user && (
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 {user.name} ({user.email})
               </span>
             )}
