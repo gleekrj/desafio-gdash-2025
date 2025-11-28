@@ -7,6 +7,11 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    allowedHosts: [
+      'desafio-gdash-2025-frontend-production.up.railway.app',
+      'localhost',
+      '127.0.0.1',
+    ],
     watch: {
       usePolling: true,
     },
@@ -16,6 +21,15 @@ export default defineConfig({
       'Pragma': 'no-cache',
       'Expires': '0',
     },
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 5173,
+    allowedHosts: [
+      'desafio-gdash-2025-frontend-production.up.railway.app',
+      'localhost',
+      '127.0.0.1',
+    ],
   },
   build: {
     // Adicionar hash aos arquivos para evitar cache
