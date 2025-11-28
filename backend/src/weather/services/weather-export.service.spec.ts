@@ -139,6 +139,372 @@ describe('WeatherExportService', () => {
 
       await expect(service.exportXlsx()).rejects.toThrow(DatabaseConnectionException);
     });
+
+    it('should handle logs with null city', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: 25.5,
+          humidity: 70,
+          city: null,
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportXlsx();
+
+      expect(result).toBeDefined();
+      expect(result.worksheets[0].rowCount).toBeGreaterThan(1);
+    });
+
+    it('should handle logs with undefined city', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: 25.5,
+          humidity: 70,
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportXlsx();
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle error during CSV export', async () => {
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockRejectedValue(new Error('Database error')),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      await expect(service.exportCsv()).rejects.toThrow();
+    });
+
+    it('should handle error during XLSX export', async () => {
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockRejectedValue(new Error('Database error')),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      await expect(service.exportXlsx()).rejects.toThrow();
+    });
+
+    it('should escape CSV values with commas', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: 25.5,
+          humidity: 70,
+          city: 'São Paulo, SP',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportCsv();
+
+      expect(result).toContain('"São Paulo, SP"');
+    });
+
+    it('should escape CSV values with quotes', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: 25.5,
+          humidity: 70,
+          city: 'São "Paulo"',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportCsv();
+
+      expect(result).toContain('""');
+    });
+
+    it('should escape CSV values with newlines', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: 25.5,
+          humidity: 70,
+          city: 'São\nPaulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportCsv();
+
+      expect(result).toContain('"');
+    });
+
+    it('should handle logs with null temperature', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: null,
+          humidity: 70,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportCsv();
+
+      expect(result).toContain('timestamp,temperature,humidity,city');
+    });
+
+    it('should handle logs with null humidity', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: 25.5,
+          humidity: null,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportCsv();
+
+      expect(result).toContain('timestamp,temperature,humidity,city');
+    });
+
+    it('should handle logs with undefined temperature', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          humidity: 70,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportCsv();
+
+      expect(result).toContain('timestamp,temperature,humidity,city');
+    });
+
+    it('should handle logs with undefined humidity', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: 25.5,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportCsv();
+
+      expect(result).toContain('timestamp,temperature,humidity,city');
+    });
+
+    it('should handle logs with null timestamp', async () => {
+      const mockLogs = [
+        {
+          timestamp: null,
+          temperature: 25.5,
+          humidity: 70,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportCsv();
+
+      expect(result).toContain('timestamp,temperature,humidity,city');
+    });
+
+    it('should handle logs with null temperature in XLSX export', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: null,
+          humidity: 70,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportXlsx();
+
+      expect(result).toBeDefined();
+      expect(result.worksheets[0].rowCount).toBeGreaterThan(1);
+    });
+
+    it('should handle logs with null humidity in XLSX export', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: 25.5,
+          humidity: null,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportXlsx();
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle logs with undefined temperature in XLSX export', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          humidity: 70,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportXlsx();
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle logs with undefined humidity in XLSX export', async () => {
+      const mockLogs = [
+        {
+          timestamp: '2025-01-24T10:00:00Z',
+          temperature: 25.5,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportXlsx();
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle logs with null timestamp in XLSX export', async () => {
+      const mockLogs = [
+        {
+          timestamp: null,
+          temperature: 25.5,
+          humidity: 70,
+          city: 'São Paulo',
+        },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+      mockConnection.readyState = 1;
+
+      const result = await service.exportXlsx();
+
+      expect(result).toBeDefined();
+    });
   });
 });
 

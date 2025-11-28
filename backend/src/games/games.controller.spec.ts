@@ -67,6 +67,16 @@ describe('GamesController', () => {
       await controller.getGames(1, 20, 'PC');
       expect(service.getGames).toHaveBeenCalledWith(1, 20, 4, undefined);
     });
+
+    it('should handle invalid platform name', async () => {
+      const mockResult = { results: [], count: 0 };
+      mockGamesService.getGames.mockResolvedValue(mockResult);
+
+      await controller.getGames(1, 20, 'InvalidPlatform');
+
+      // Quando a plataforma não existe no mapeamento, platformId deve ser undefined
+      expect(service.getGames).toHaveBeenCalledWith(1, 20, undefined, undefined);
+    });
   });
 
   describe('getPlatforms', () => {

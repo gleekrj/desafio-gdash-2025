@@ -13,13 +13,16 @@ describe('WeatherInsightsGeneratorService', () => {
   const mockWeatherLogModel = {
     find: jest.fn().mockReturnValue({
       sort: jest.fn().mockReturnValue({
-        limit: jest.fn().mockResolvedValue([]),
+        limit: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue([]),
+        }),
       }),
     }),
   };
 
   const mockStatisticsService = {
     getRecentStatistics: jest.fn(),
+    getTemperatureTrend: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -57,7 +60,9 @@ describe('WeatherInsightsGeneratorService', () => {
 
       mockWeatherLogModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
-          limit: jest.fn().mockResolvedValue(mockLogs),
+          limit: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(mockLogs),
+          }),
         }),
       });
 
@@ -69,8 +74,9 @@ describe('WeatherInsightsGeneratorService', () => {
         maxHumidity: 75,
         minHumidity: 70,
       });
+      mockStatisticsService.getTemperatureTrend.mockResolvedValue('estável');
 
-      const result = await service.generateInsights(30);
+      const result = await service.generateInsights(30, undefined);
 
       expect(result).toHaveProperty('summary');
       expect(result).toHaveProperty('statistics');
@@ -87,7 +93,9 @@ describe('WeatherInsightsGeneratorService', () => {
 
       mockWeatherLogModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
-          limit: jest.fn().mockResolvedValue(mockLogs),
+          limit: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(mockLogs),
+          }),
         }),
       });
 
@@ -99,6 +107,7 @@ describe('WeatherInsightsGeneratorService', () => {
         maxHumidity: 70,
         minHumidity: 70,
       });
+      mockStatisticsService.getTemperatureTrend.mockResolvedValue('estável');
 
       const result = await service.generateInsights(30, 'São Paulo');
 
@@ -109,7 +118,9 @@ describe('WeatherInsightsGeneratorService', () => {
     it('should handle empty logs', async () => {
       mockWeatherLogModel.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
-          limit: jest.fn().mockResolvedValue([]),
+          limit: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue([]),
+          }),
         }),
       });
 

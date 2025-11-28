@@ -14,6 +14,7 @@ describe('WeatherController', () => {
     exportCsv: jest.fn(),
     exportXlsx: jest.fn(),
     getInsights: jest.fn(),
+    getAvailableCities: jest.fn(),
   };
 
   beforeEach(async () => {

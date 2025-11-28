@@ -165,6 +165,124 @@ describe('WeatherStatisticsService', () => {
 
       expect(result).toBe('estável');
     });
+
+    it('should not filter by city when city is not provided', async () => {
+      const mockLogs = [
+        { temperature: 25, humidity: 70 },
+        { temperature: 26, humidity: 65 },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      await service.getTemperatureTrend(30);
+
+      expect(mockWeatherLogModel.find).toHaveBeenCalledWith({});
+    });
+
+    it('should not filter by city when city is not provided in getRecentStatistics', async () => {
+      const mockLogs = [
+        { temperature: 25, humidity: 70 },
+        { temperature: 26, humidity: 65 },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      await service.getRecentStatistics(30);
+
+      expect(mockWeatherLogModel.find).toHaveBeenCalledWith({});
+    });
+
+    it('should not filter by city when city is undefined in getRecentStatistics', async () => {
+      const mockLogs = [
+        { temperature: 25, humidity: 70 },
+        { temperature: 26, humidity: 65 },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      await service.getRecentStatistics(30, undefined);
+
+      // Quando city é undefined, não deve filtrar
+      expect(mockWeatherLogModel.find).toHaveBeenCalledWith({});
+    });
+
+    it('should not filter by city when city is undefined in getTemperatureTrend', async () => {
+      const mockLogs = [
+        { temperature: 25, humidity: 70 },
+        { temperature: 26, humidity: 65 },
+      ];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      await service.getTemperatureTrend(30, undefined);
+
+      // Quando city é undefined, não deve filtrar
+      expect(mockWeatherLogModel.find).toHaveBeenCalledWith({});
+    });
+
+    it('should detect falling trend', async () => {
+      // Array ordenado por timestamp DESC (mais recentes primeiro)
+      // Para detectar tendência de queda, os últimos 10 devem ser menores que os anteriores 10
+      const mockLogs = Array(30)
+        .fill(null)
+        .map((_, i) => ({
+          temperature: 20 + i * 0.5, // Temperatura subindo no array (mais recente = menor)
+          humidity: 70,
+        }));
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      const result = await service.getTemperatureTrend(30);
+
+      // last10 = [20, 20.5, ..., 24.5] (média ~22.25)
+      // previous10 = [25, 25.5, ..., 29.5] (média ~27.25)
+      // Como last10 < previous10, tendência é "caindo"
+      expect(result).toBe('caindo');
+    });
+
+    it('should handle empty temperature array', async () => {
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([]),
+      };
+
+      mockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      const result = await service.getTemperatureTrend(30);
+
+      expect(result).toBe('estável');
+    });
   });
 });
 

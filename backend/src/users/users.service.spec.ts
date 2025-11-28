@@ -384,6 +384,211 @@ describe('UsersService', () => {
 
       await expect(service.remove(userId)).rejects.toThrow(HttpException);
     });
+
+    it('should throw HttpException when trying to delete last admin', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const mockUser = {
+        _id: userId,
+        name: 'Admin User',
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+
+      const mockQuery = {
+        exec: jest.fn().mockResolvedValue(mockUser),
+      };
+
+      const mockCountQuery = {
+        exec: jest.fn().mockResolvedValue(1),
+      };
+
+      MockUserModel.findById.mockReturnValue(mockQuery);
+      MockUserModel.countDocuments.mockReturnValue(mockCountQuery);
+
+      await expect(service.remove(userId)).rejects.toThrow(HttpException);
+      await expect(service.remove(userId)).rejects.toThrow('último administrador');
+    });
+
+    it('should allow deleting admin when there are multiple admins', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const mockUser = {
+        _id: userId,
+        name: 'Admin User',
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+
+      const mockQuery = {
+        exec: jest.fn().mockResolvedValue(mockUser),
+      };
+
+      const mockCountQuery = {
+        exec: jest.fn().mockResolvedValue(2),
+      };
+
+      MockUserModel.findById.mockReturnValue(mockQuery);
+      MockUserModel.countDocuments.mockReturnValue(mockCountQuery);
+
+      const mockDeleteQuery = {
+        exec: jest.fn().mockResolvedValue(mockUser),
+      };
+
+      MockUserModel.findByIdAndDelete.mockReturnValue(mockDeleteQuery);
+
+      await service.remove(userId);
+
+      expect(MockUserModel.findByIdAndDelete).toHaveBeenCalledWith(userId);
+    });
+  });
+
+  describe('update', () => {
+    it('should throw HttpException when trying to change last admin role', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const updateUserDto: UpdateUserDto = {
+        role: 'user',
+      };
+
+      const existingUser = {
+        _id: userId,
+        name: 'Admin User',
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+
+      const mockQuery = {
+        exec: jest.fn().mockResolvedValue(existingUser),
+      };
+
+      const mockCountQuery = {
+        exec: jest.fn().mockResolvedValue(1),
+      };
+
+      MockUserModel.findById.mockReturnValue(mockQuery);
+      MockUserModel.countDocuments.mockReturnValue(mockCountQuery);
+
+      await expect(service.update(userId, updateUserDto)).rejects.toThrow(HttpException);
+      await expect(service.update(userId, updateUserDto)).rejects.toThrow('último administrador');
+    });
+
+    it('should allow changing admin role when there are multiple admins', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const updateUserDto: UpdateUserDto = {
+        role: 'user',
+      };
+
+      const existingUser = {
+        _id: userId,
+        name: 'Admin User',
+        email: 'admin@example.com',
+        role: 'admin',
+      };
+
+      const updatedUser = {
+        _id: userId,
+        ...updateUserDto,
+        email: 'admin@example.com',
+        toObject: jest.fn().mockReturnValue({
+          _id: userId,
+          ...updateUserDto,
+          email: 'admin@example.com',
+        }),
+      };
+
+      const mockQuery = {
+        exec: jest.fn().mockResolvedValue(existingUser),
+      };
+
+      const mockCountQuery = {
+        exec: jest.fn().mockResolvedValue(2),
+      };
+
+      MockUserModel.findById.mockReturnValue(mockQuery);
+      MockUserModel.countDocuments.mockReturnValue(mockCountQuery);
+
+      const mockUpdateQuery = {
+        exec: jest.fn().mockResolvedValue(updatedUser),
+      };
+
+      MockUserModel.findByIdAndUpdate.mockReturnValue(mockUpdateQuery);
+
+      const result = await service.update(userId, updateUserDto);
+
+      expect(result.role).toBe('user');
+    });
+  });
+
+  describe('changePassword', () => {
+    it('should change user password', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const changePasswordDto = {
+        password: 'newPassword123',
+      };
+
+      const mockUser = {
+        _id: userId,
+        name: 'Test User',
+        email: 'test@example.com',
+      };
+
+      const mockQuery = {
+        exec: jest.fn().mockResolvedValue(mockUser),
+      };
+
+      MockUserModel.findById.mockReturnValue(mockQuery);
+      MockUserModel.findByIdAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockUser),
+      });
+
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedNewPassword');
+
+      await service.changePassword(userId, changePasswordDto);
+
+      expect(bcrypt.hash).toHaveBeenCalledWith(changePasswordDto.password, 10);
+      expect(MockUserModel.findByIdAndUpdate).toHaveBeenCalled();
+    });
+
+    it('should throw HttpException when user not found', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const changePasswordDto = {
+        password: 'newPassword123',
+      };
+
+      const mockQuery = {
+        exec: jest.fn().mockResolvedValue(null),
+      };
+
+      MockUserModel.findById.mockReturnValue(mockQuery);
+
+      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(HttpException);
+    });
+  });
+
+  describe('count and countAdmins', () => {
+    it('should count all users', async () => {
+      const mockCountQuery = {
+        exec: jest.fn().mockResolvedValue(5),
+      };
+
+      MockUserModel.countDocuments.mockReturnValue(mockCountQuery);
+
+      const result = await service.count();
+
+      expect(result).toBe(5);
+      expect(MockUserModel.countDocuments).toHaveBeenCalledWith();
+    });
+
+    it('should count admin users', async () => {
+      const mockCountQuery = {
+        exec: jest.fn().mockResolvedValue(2),
+      };
+
+      MockUserModel.countDocuments.mockReturnValue(mockCountQuery);
+
+      const result = await service.countAdmins();
+
+      expect(result).toBe(2);
+      expect(MockUserModel.countDocuments).toHaveBeenCalledWith({ role: 'admin' });
+    });
   });
 });
 

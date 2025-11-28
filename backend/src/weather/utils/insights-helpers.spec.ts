@@ -47,12 +47,16 @@ describe('Insights Helpers', () => {
     });
 
     it('should return "subindo" when temperature is rising', () => {
-      const temperatures = Array.from({ length: 20 }, (_, i) => 20 + i);
+      // Array ordenado por timestamp DESC (mais recentes primeiro)
+      // Para detectar tendência de subida, os últimos 10 devem ser maiores que os anteriores 10
+      const temperatures = Array.from({ length: 20 }, (_, i) => 30 - i * 0.5); // Descendo no array = subindo no tempo
       expect(detectTemperatureTrend(temperatures)).toBe('subindo');
     });
 
     it('should return "caindo" when temperature is falling', () => {
-      const temperatures = Array.from({ length: 20 }, (_, i) => 40 - i);
+      // Array ordenado por timestamp DESC (mais recentes primeiro)
+      // Para detectar tendência de queda, os últimos 10 devem ser menores que os anteriores 10
+      const temperatures = Array.from({ length: 20 }, (_, i) => 20 + i * 0.5); // Subindo no array = caindo no tempo
       expect(detectTemperatureTrend(temperatures)).toBe('caindo');
     });
 
@@ -199,6 +203,36 @@ describe('Insights Helpers', () => {
       expect(alerts.length).toBeGreaterThan(1);
       expect(alerts).toContain('Calor extremo detectado');
       expect(alerts).toContain('Alta umidade - chance de chuva');
+    });
+
+    it('should not alert for falling temperature trend', () => {
+      const statistics: WeatherStatistics = {
+        averageTemperature: 15,
+        averageHumidity: 55,
+        maxTemperature: 20,
+        minTemperature: 8,
+        maxHumidity: 60,
+        minHumidity: 50,
+      };
+      const alerts = generateAlerts(statistics, 'caindo');
+      // Não há alerta específico para tendência de queda, apenas para subida
+      // Mas pode haver alerta de frio se minTemperature < 10
+      expect(alerts).toContain('Frio intenso detectado');
+    });
+
+    it('should handle detectTemperatureTrend with empty previous10 array', () => {
+      // Teste para quando previous10.length === 0 (caso edge)
+      // Mas na prática, se temperatures.length < 20, já retorna 'estável'
+      const temperatures = Array(10).fill(25);
+      const result = detectTemperatureTrend(temperatures);
+      expect(result).toBe('estável');
+    });
+
+    it('should handle detectTemperatureTrend when avgLast10 equals avgPrevious10', () => {
+      // Teste para quando as médias são iguais (deve retornar 'estável')
+      const temperatures = Array(20).fill(25);
+      const result = detectTemperatureTrend(temperatures);
+      expect(result).toBe('estável');
     });
   });
 });

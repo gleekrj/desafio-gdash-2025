@@ -106,8 +106,7 @@ describe('UsersController', () => {
   describe('changePassword', () => {
     it('should change user password', async () => {
       const changePasswordDto: ChangePasswordDto = {
-        currentPassword: 'old123',
-        newPassword: 'new123',
+        password: 'NewPassword123!',
       };
       mockUsersService.changePassword.mockResolvedValue(undefined);
 

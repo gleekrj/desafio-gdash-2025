@@ -328,6 +328,17 @@ describe('WeatherService', () => {
       expect(result.message).toContain('Dados insuficientes');
     });
 
+    it('should return message when no logs available with city', async () => {
+      const error = new Error('Dados insuficientes para gerar insights');
+      mockInsightsGenerator.generateInsights.mockRejectedValue(error);
+
+      const result = await service.getInsights('São Paulo');
+
+      expect(result).toHaveProperty('message');
+      expect(result.message).toContain('Dados insuficientes');
+      expect(result.summary).toContain('São Paulo');
+    });
+
     it('should pass city parameter when provided', async () => {
       const mockInsights = {
         summary: 'Test summary',
@@ -359,6 +370,13 @@ describe('WeatherService', () => {
       mockInsightsGenerator.generateInsights.mockRejectedValue(error);
 
       await expect(service.getInsights()).rejects.toThrow('Database connection failed');
+    });
+
+    it('should throw error for non-insufficient-data errors with city', async () => {
+      const error = new Error('Database connection failed');
+      mockInsightsGenerator.generateInsights.mockRejectedValue(error);
+
+      await expect(service.getInsights('São Paulo')).rejects.toThrow('Database connection failed');
     });
   });
 
@@ -404,6 +422,205 @@ describe('WeatherService', () => {
       mockExportService.exportXlsx.mockRejectedValue(error);
 
       await expect(service.exportXlsx()).rejects.toThrow('Export failed');
+    });
+  });
+
+  describe('findAllPaginated with date filters', () => {
+    it('should filter by startDate', async () => {
+      const query = {
+        page: 1,
+        limit: 10,
+        startDate: '2025-01-01T00:00:00Z',
+      };
+      const mockData = [];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockData),
+      };
+
+      MockWeatherLogModel.find.mockReturnValue(mockQuery);
+      MockWeatherLogModel.countDocuments.mockResolvedValue(0);
+
+      await service.findAllPaginated(query);
+
+      expect(MockWeatherLogModel.find).toHaveBeenCalledWith({
+        timestamp: { $gte: '2025-01-01T00:00:00Z' },
+      });
+    });
+
+    it('should filter by endDate', async () => {
+      const query = {
+        page: 1,
+        limit: 10,
+        endDate: '2025-01-31T23:59:59Z',
+      };
+      const mockData = [];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockData),
+      };
+
+      MockWeatherLogModel.find.mockReturnValue(mockQuery);
+      MockWeatherLogModel.countDocuments.mockResolvedValue(0);
+
+      await service.findAllPaginated(query);
+
+      expect(MockWeatherLogModel.find).toHaveBeenCalledWith({
+        timestamp: { $lte: '2025-01-31T23:59:59Z' },
+      });
+    });
+
+    it('should filter by both startDate and endDate', async () => {
+      const query = {
+        page: 1,
+        limit: 10,
+        startDate: '2025-01-01T00:00:00Z',
+        endDate: '2025-01-31T23:59:59Z',
+      };
+      const mockData = [];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockData),
+      };
+
+      MockWeatherLogModel.find.mockReturnValue(mockQuery);
+      MockWeatherLogModel.countDocuments.mockResolvedValue(0);
+
+      await service.findAllPaginated(query);
+
+      expect(MockWeatherLogModel.find).toHaveBeenCalledWith({
+        timestamp: {
+          $gte: '2025-01-01T00:00:00Z',
+          $lte: '2025-01-31T23:59:59Z',
+        },
+      });
+    });
+
+    it('should filter by city and date range', async () => {
+      const query = {
+        page: 1,
+        limit: 10,
+        city: 'São Paulo',
+        startDate: '2025-01-01T00:00:00Z',
+        endDate: '2025-01-31T23:59:59Z',
+      };
+      const mockData = [];
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockData),
+      };
+
+      MockWeatherLogModel.find.mockReturnValue(mockQuery);
+      MockWeatherLogModel.countDocuments.mockResolvedValue(0);
+
+      await service.findAllPaginated(query);
+
+      expect(MockWeatherLogModel.find).toHaveBeenCalledWith({
+        city: { $regex: 'São Paulo', $options: 'i' },
+        timestamp: {
+          $gte: '2025-01-01T00:00:00Z',
+          $lte: '2025-01-31T23:59:59Z',
+        },
+      });
+    });
+  });
+
+  describe('findAll error handling', () => {
+    it('should handle database errors gracefully', async () => {
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockRejectedValue(new Error('Database error')),
+      };
+
+      MockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      await expect(service.findAll()).rejects.toThrow('Database error');
+    });
+
+    it('should handle error when getting collection info', async () => {
+      const mockLogs = Array(100).fill(null).map((_, i) => ({
+        _id: `${i + 1}`,
+        timestamp: `2025-01-24T${10 + i}:00:00Z`,
+        temperature: 25 + i,
+        humidity: 70 + i,
+      }));
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      MockWeatherLogModel.find.mockReturnValue(mockQuery);
+      MockWeatherLogModel.collection = {
+        name: 'weatherlogs',
+      };
+      MockWeatherLogModel.countDocuments = jest.fn().mockRejectedValue(new Error('Collection error'));
+
+      const result = await service.findAll();
+
+      expect(result).toEqual(mockLogs);
+    });
+
+    it('should handle null db in connection', async () => {
+      const mockLogs = Array(100).fill(null).map((_, i) => ({
+        _id: `${i + 1}`,
+        timestamp: `2025-01-24T${10 + i}:00:00Z`,
+        temperature: 25 + i,
+        humidity: 70 + i,
+      }));
+
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockLogs),
+      };
+
+      MockWeatherLogModel.find.mockReturnValue(mockQuery);
+      MockWeatherLogModel.collection = {
+        name: 'weatherlogs',
+      };
+      MockWeatherLogModel.countDocuments = jest.fn().mockResolvedValue(100);
+      
+      // Simular db null
+      const originalDb = mockConnection.db;
+      mockConnection.db = null as any;
+
+      const result = await service.findAll();
+
+      expect(result).toEqual(mockLogs);
+      
+      // Restaurar db
+      mockConnection.db = originalDb;
+    });
+  });
+
+  describe('findAllPaginated error handling', () => {
+    it('should handle database errors', async () => {
+      const query = { page: 1, limit: 10 };
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockRejectedValue(new Error('Database error')),
+      };
+
+      MockWeatherLogModel.find.mockReturnValue(mockQuery);
+
+      await expect(service.findAllPaginated(query)).rejects.toThrow('Database error');
     });
   });
 });
