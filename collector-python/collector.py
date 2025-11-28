@@ -317,63 +317,38 @@ def post_direct(payload: Dict) -> bool:
         return False
 
 
-def publish_to_rabbit(payload: Dict) -> bool:
+class RabbitMQConnection:
     """
-    Publica dados na fila RabbitMQ 'weather'.
+    Gerencia uma conexão persistente com RabbitMQ para reutilização.
+    Evita abrir/fechar conexões a cada mensagem, reduzindo overhead e logs.
+    """
+    def __init__(self, rabbitmq_url: str):
+        self.rabbitmq_url = rabbitmq_url
+        self.connection = None
+        self.channel = None
+        self._is_connected = False
     
-    Implementa retry com backoff exponencial para lidar com:
-    - Falhas temporárias de conexão (RabbitMQ reiniciando)
-    - Problemas de rede transitórios
-    - DNS não resolvido (quando rodando localmente com URLs Docker)
-    
-    Estratégia de retry:
-    - 3 tentativas (balanceamento entre resiliência e performance)
-    - Backoff exponencial (2s, 4s, 8s) para reduzir carga durante problemas
-    - Detecta erros de DNS e fornece mensagens de erro mais claras
-    - Mensagens são marcadas como persistentes (delivery_mode=2) para não perder dados
-    
-    Args:
-        payload: Dados a serem publicados
+    def connect(self) -> bool:
+        """
+        Estabelece conexão com RabbitMQ.
         
-    Returns:
-        bool: True se sucesso, False caso contrário
-    """
-    # max_retries: 3 tentativas é suficiente para:
-    # - Recuperar de reinicializações rápidas do RabbitMQ
-    # - Evitar espera excessiva em problemas permanentes (DNS incorreto, etc)
-    max_retries = 3
-    # retry_delay inicial: 2 segundos permite tempo para:
-    # - RabbitMQ processar conexões pendentes
-    # - Rede se recuperar de problemas transitórios
-    # Backoff exponencial (2s -> 4s -> 8s) reduz carga progressivamente
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
+        Returns:
+            bool: True se conexão bem-sucedida, False caso contrário
+        """
+        if self._is_connected and self.connection and not self.connection.is_closed:
+            return True
+        
         try:
-            logger.info(f"[collector] Conectando ao RabbitMQ (tentativa {attempt + 1}/{max_retries})...")
-            logger.info(f"[collector] URL do RabbitMQ: {RABBITMQ_URL}")
-            
-            # Parse da URL do RabbitMQ
-            params = pika.URLParameters(RABBITMQ_URL)
-            connection = pika.BlockingConnection(params)
-            channel = connection.channel()
+            logger.info(f"[collector] Conectando ao RabbitMQ...")
+            params = pika.URLParameters(self.rabbitmq_url)
+            self.connection = pika.BlockingConnection(params)
+            self.channel = self.connection.channel()
             
             # Declarar fila (durable para persistência)
-            channel.queue_declare(queue='weather', durable=True)
+            self.channel.queue_declare(queue='weather', durable=True)
             
-            # Publicar mensagem
-            message = json.dumps(payload)
-            channel.basic_publish(
-                exchange='',
-                routing_key='weather',
-                body=message,
-                properties=pika.BasicProperties(
-                    delivery_mode=2,  # Tornar mensagem persistente
-                )
-            )
-            
-            connection.close()
-            logger.info(f"[collector] Mensagem publicada na fila 'weather' com sucesso")
+            self._is_connected = True
+            logger.info(f"[collector] Conectado ao RabbitMQ com sucesso")
             return True
             
         except (pika.exceptions.AMQPConnectionError, OSError, Exception) as e:
@@ -383,26 +358,106 @@ def publish_to_rabbit(payload: Dict) -> bool:
             # Detectar erros de DNS/resolução de hostname
             if "getaddrinfo failed" in error_msg or "Name or service not known" in error_msg:
                 logger.error(f"[collector] Erro de DNS: Não foi possível resolver o hostname do RabbitMQ")
-                logger.error(f"[collector] Verifique se RABBITMQ_URL está correto: {RABBITMQ_URL}")
+                logger.error(f"[collector] Verifique se RABBITMQ_URL está correto")
                 logger.error(f"[collector] Se estiver rodando localmente, use 'localhost' em vez do nome do serviço Docker")
-                if attempt < max_retries - 1:
-                    logger.info(f"[collector] Tentando reconectar em {retry_delay} segundos...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                else:
-                    logger.error(f"[collector] Falha ao conectar após {max_retries} tentativas")
+            else:
+                logger.error(f"[collector] Erro ao conectar ao RabbitMQ: {error_type}: {error_msg}")
+            
+            self._is_connected = False
+            self.connection = None
+            self.channel = None
+            return False
+    
+    def publish(self, payload: Dict) -> bool:
+        """
+        Publica uma mensagem na fila RabbitMQ.
+        Reconecta automaticamente se a conexão estiver fechada.
+        
+        Args:
+            payload: Dados a serem publicados
+            
+        Returns:
+            bool: True se sucesso, False caso contrário
+        """
+        # Tentar reconectar se necessário
+        if not self._is_connected or not self.connection or self.connection.is_closed:
+            if not self.connect():
+                return False
+        
+        try:
+            message = json.dumps(payload)
+            self.channel.basic_publish(
+                exchange='',
+                routing_key='weather',
+                body=message,
+                properties=pika.BasicProperties(
+                    delivery_mode=2,  # Tornar mensagem persistente
+                )
+            )
+            return True
+            
+        except (pika.exceptions.AMQPConnectionError, pika.exceptions.AMQPChannelError, OSError) as e:
+            logger.warning(f"[collector] Erro ao publicar mensagem, tentando reconectar: {e}")
+            self._is_connected = False
+            
+            # Tentar reconectar uma vez
+            if self.connect():
+                try:
+                    message = json.dumps(payload)
+                    self.channel.basic_publish(
+                        exchange='',
+                        routing_key='weather',
+                        body=message,
+                        properties=pika.BasicProperties(
+                            delivery_mode=2,
+                        )
+                    )
+                    return True
+                except Exception as retry_error:
+                    logger.error(f"[collector] Falha ao publicar após reconexão: {retry_error}")
                     return False
             else:
-                logger.error(f"[collector] Erro ao publicar no RabbitMQ (tentativa {attempt + 1}): {error_type}: {error_msg}")
-                if attempt < max_retries - 1:
-                    logger.info(f"[collector] Tentando reconectar em {retry_delay} segundos...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Backoff exponencial
-                else:
-                    logger.error(f"[collector] Falha ao publicar após {max_retries} tentativas")
-                    return False
+                return False
+        except Exception as e:
+            logger.error(f"[collector] Erro inesperado ao publicar: {e}")
+            return False
     
-    return False
+    def close(self):
+        """Fecha a conexão com RabbitMQ."""
+        try:
+            if self.channel and not self.channel.is_closed:
+                self.channel.close()
+            if self.connection and not self.connection.is_closed:
+                self.connection.close()
+            logger.info(f"[collector] Conexão RabbitMQ fechada")
+        except Exception as e:
+            logger.warning(f"[collector] Erro ao fechar conexão RabbitMQ: {e}")
+        finally:
+            self._is_connected = False
+            self.connection = None
+            self.channel = None
+
+
+# Instância global da conexão (será inicializada no main)
+_rabbitmq_connection: Optional[RabbitMQConnection] = None
+
+
+def publish_to_rabbit(payload: Dict) -> bool:
+    """
+    Publica dados na fila RabbitMQ 'weather' usando conexão persistente.
+    
+    Args:
+        payload: Dados a serem publicados
+        
+    Returns:
+        bool: True se sucesso, False caso contrário
+    """
+    global _rabbitmq_connection
+    
+    if not _rabbitmq_connection:
+        _rabbitmq_connection = RabbitMQConnection(RABBITMQ_URL)
+    
+    return _rabbitmq_connection.publish(payload)
 
 
 def main():
@@ -410,6 +465,8 @@ def main():
     Loop principal de coleta de dados.
     Coleta dados para todas as capitais brasileiras.
     """
+    global _rabbitmq_connection
+    
     logger.info("[collector] Iniciando collector...")
     logger.info(f"[collector] Modo: {COLLECTOR_MODE}")
     logger.info(f"[collector] Intervalo de coleta: {COLLECT_INTERVAL} segundos")
@@ -421,9 +478,13 @@ def main():
         return
     
     if COLLECTOR_MODE == 'rabbit':
-        logger.info(f"[collector] RabbitMQ URL: {RABBITMQ_URL}")
         if not RABBITMQ_URL:
             logger.error("[collector] RABBITMQ_URL não configurada!")
+            return
+        # Inicializar conexão RabbitMQ persistente
+        _rabbitmq_connection = RabbitMQConnection(RABBITMQ_URL)
+        if not _rabbitmq_connection.connect():
+            logger.error("[collector] Falha ao conectar ao RabbitMQ. Encerrando...")
             return
     else:
         logger.info(f"[collector] Backend URL: {BACKEND_URL}")
@@ -431,44 +492,49 @@ def main():
             logger.error("[collector] BACKEND_URL não configurada!")
             return
     
-    while True:
-        try:
-            # Coletar dados para todas as capitais
-            all_payloads = fetch_all_capitals()
-            
-            # Enviar dados de cada capital
-            success_count = 0
-            for idx, payload in enumerate(all_payloads):
-                normalized = normalize_payload(payload)
+    try:
+        while True:
+            try:
+                # Coletar dados para todas as capitais
+                all_payloads = fetch_all_capitals()
                 
-                # Enviar dados conforme o modo configurado
-                if COLLECTOR_MODE == 'rabbit':
-                    success = publish_to_rabbit(normalized)
-                else:
-                    success = post_direct(normalized)
-                    # Adicionar delay entre requisições no modo direct para evitar rate limiting
-                    # Delay de 0.5 segundos entre requisições (exceto na última)
-                    if idx < len(all_payloads) - 1:
-                        time.sleep(0.5)
+                # Enviar dados de cada capital
+                success_count = 0
+                for idx, payload in enumerate(all_payloads):
+                    normalized = normalize_payload(payload)
+                    
+                    # Enviar dados conforme o modo configurado
+                    if COLLECTOR_MODE == 'rabbit':
+                        success = publish_to_rabbit(normalized)
+                    else:
+                        success = post_direct(normalized)
+                        # Adicionar delay entre requisições no modo direct para evitar rate limiting
+                        # Delay de 0.5 segundos entre requisições (exceto na última)
+                        if idx < len(all_payloads) - 1:
+                            time.sleep(0.5)
+                    
+                    if success:
+                        success_count += 1
+                    else:
+                        logger.warning(f"[collector] Falha ao enviar dados para {normalized.get('city', 'cidade desconhecida')}, mas continuando...")
                 
-                if success:
-                    success_count += 1
-                else:
-                    logger.warning(f"[collector] Falha ao enviar dados para {normalized.get('city', 'cidade desconhecida')}, mas continuando...")
-            
-            logger.info(f"[collector] Enviados {success_count}/{len(all_payloads)} registros com sucesso")
-            
-            # Aguardar intervalo antes da próxima coleta
-            logger.info(f"[collector] Aguardando {COLLECT_INTERVAL} segundos até próxima coleta...")
-            time.sleep(COLLECT_INTERVAL)
-            
-        except KeyboardInterrupt:
-            logger.info("[collector] Interrompido pelo usuário")
-            break
-        except Exception as e:
-            logger.error(f"[collector] Erro inesperado: {e}")
-            logger.info(f"[collector] Aguardando {COLLECT_INTERVAL} segundos antes de tentar novamente...")
-            time.sleep(COLLECT_INTERVAL)
+                logger.info(f"[collector] Enviados {success_count}/{len(all_payloads)} registros com sucesso")
+                
+                # Aguardar intervalo antes da próxima coleta
+                logger.info(f"[collector] Aguardando {COLLECT_INTERVAL} segundos até próxima coleta...")
+                time.sleep(COLLECT_INTERVAL)
+                
+            except KeyboardInterrupt:
+                logger.info("[collector] Interrompido pelo usuário")
+                break
+            except Exception as e:
+                logger.error(f"[collector] Erro inesperado: {e}")
+                logger.info(f"[collector] Aguardando {COLLECT_INTERVAL} segundos antes de tentar novamente...")
+                time.sleep(COLLECT_INTERVAL)
+    finally:
+        # Fechar conexão RabbitMQ ao encerrar
+        if _rabbitmq_connection:
+            _rabbitmq_connection.close()
 
 
 if __name__ == "__main__":
