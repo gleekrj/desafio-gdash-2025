@@ -31,8 +31,24 @@ interface PaginatedResponse {
   hasNextPage: boolean;
 }
 
+/**
+ * Garante que a URL tenha um protocolo válido (http:// ou https://).
+ */
+function ensureProtocol(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  
+  const localHosts = ['localhost', '127.0.0.1', 'backend:'];
+  if (localHosts.some(host => trimmed.startsWith(host))) return `http://${trimmed}`;
+  if (trimmed.startsWith('backend') && !trimmed.includes('.')) return `http://${trimmed}`;
+  
+  return `https://${trimmed}`;
+}
+
 // @ts-ignore
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = ensureProtocol(rawApiUrl);
 
 async function authenticatedFetch(url: string) {
   const token = localStorage.getItem('token');

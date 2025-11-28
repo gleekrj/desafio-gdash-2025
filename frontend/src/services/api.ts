@@ -36,8 +36,42 @@ export interface WeatherInsights {
   dataPoints: number;
 }
 
+/**
+ * Garante que a URL tenha um protocolo válido (http:// ou https://).
+ * Se não tiver protocolo, adiciona https:// por padrão (assumindo produção).
+ * Para URLs locais (localhost, 127.0.0.1), usa http://
+ */
+function ensureProtocol(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  // Se já tem protocolo, retornar como está
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+
+  // Verificar se é uma URL local que deve usar http://
+  const localHosts = ['localhost', '127.0.0.1', 'backend:'];
+  for (const host of localHosts) {
+    if (trimmed.startsWith(host)) {
+      return `http://${trimmed}`;
+    }
+  }
+
+  // Se contém "backend" no início e não tem ponto (provavelmente nome de serviço Docker)
+  if (trimmed.startsWith('backend') && !trimmed.includes('.')) {
+    return `http://${trimmed}`;
+  }
+
+  // Para todas as outras URLs (assumindo produção com domínio externo), usar https://
+  return `https://${trimmed}`;
+}
+
 // @ts-ignore - Vite provides import.meta.env at runtime
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = ensureProtocol(rawApiUrl);
 
 // Helper para fazer requisições autenticadas
 async function authenticatedFetch(url: string, options: RequestInit = {}) {

@@ -91,11 +91,43 @@ if is_running_locally() and 'rabbitmq:' in RABBITMQ_URL and 'localhost' not in R
     RABBITMQ_URL = RABBITMQ_URL.replace('rabbitmq:', 'localhost:')
     logger.info(f"[collector] RABBITMQ_URL ajustada para: {RABBITMQ_URL}")
 
+def ensure_protocol(url: str) -> str:
+    """
+    Garante que a URL tenha um protocolo válido (http:// ou https://).
+    Se não tiver protocolo, adiciona https:// por padrão (assumindo produção).
+    Para URLs locais/Docker (localhost, backend:3000, etc), usa http://
+    """
+    url = url.strip()
+    if not url:
+        return url
+    
+    # Se já tem protocolo, retornar como está
+    if url.startswith('http://') or url.startswith('https://'):
+        return url
+    
+    # Verificar se é uma URL local/Docker que deve usar http://
+    local_hosts = ['localhost', '127.0.0.1', 'backend:']
+    for host in local_hosts:
+        if url.startswith(host):
+            return f'http://{url}'
+    
+    # Se contém "backend" no início e não tem ponto (provavelmente nome de serviço Docker)
+    if url.startswith('backend') and '.' not in url:
+        return f'http://{url}'
+    
+    # Para todas as outras URLs (assumindo produção com domínio externo), usar https://
+    return f'https://{url}'
+
+# Garantir que BACKEND_URL tenha protocolo
+BACKEND_URL = ensure_protocol(BACKEND_URL)
+
 # Ajustar BACKEND_URL se necessário
 if is_running_locally() and 'backend:' in BACKEND_URL and 'localhost' not in BACKEND_URL:
     logger.warning(f"[collector] Detectado: rodando localmente mas BACKEND_URL usa nome de serviço Docker")
     logger.warning(f"[collector] Ajustando automaticamente para localhost...")
     BACKEND_URL = BACKEND_URL.replace('backend:', 'localhost:')
+    # Garantir protocolo novamente após ajuste
+    BACKEND_URL = ensure_protocol(BACKEND_URL)
     logger.info(f"[collector] BACKEND_URL ajustada para: {BACKEND_URL}")
 
 
@@ -255,7 +287,9 @@ def post_direct(payload: Dict) -> bool:
     Returns:
         bool: True se sucesso, False caso contrário
     """
-    url = f"{BACKEND_URL}/weather/logs"
+    # Remover barra final se existir antes de adicionar o path
+    base_url = BACKEND_URL.rstrip('/')
+    url = f"{base_url}/weather/logs"
     
     try:
         logger.info(f"[collector] Enviando dados para {url}")

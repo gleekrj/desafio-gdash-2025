@@ -130,10 +130,18 @@ func init() {
 		backendURL = "http://backend:3000"
 	}
 
+	// Garantir que a URL tenha protocolo antes de qualquer processamento
+	backendURL = ensureProtocol(backendURL)
+
 	// Ajustar backend URL para local se necessário
 	if isRunningLocally() {
 		backendURL = adjustURLForLocal(backendURL, "backend", "localhost")
+		// Garantir protocolo novamente após ajuste (pode remover http:// durante replace)
+		backendURL = ensureProtocol(backendURL)
 	}
+
+	// Remover barra final se existir antes de adicionar o path
+	backendURL = strings.TrimSuffix(backendURL, "/")
 	backendURL = backendURL + "/weather/logs"
 
 	// HTTP client com timeout
@@ -159,6 +167,38 @@ func isRunningLocally() bool {
 // adjustURLForLocal substitui o hostname Docker por localhost na URL
 func adjustURLForLocal(url, dockerHost, localHost string) string {
 	return strings.Replace(url, dockerHost, localHost, 1)
+}
+
+// ensureProtocol garante que a URL tenha um protocolo válido (http:// ou https://)
+// Se não tiver protocolo, adiciona https:// por padrão (assumindo produção)
+// Para URLs locais/Docker (localhost, backend:3000, etc), usa http://
+func ensureProtocol(url string) string {
+	url = strings.TrimSpace(url)
+	if url == "" {
+		return url
+	}
+
+	// Se já tem protocolo, retornar como está
+	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		return url
+	}
+
+	// Verificar se é uma URL local/Docker que deve usar http://
+	// Casos: localhost, 127.0.0.1, backend:port, backend-hostname
+	localHosts := []string{"localhost", "127.0.0.1", "backend:"}
+	for _, host := range localHosts {
+		if strings.HasPrefix(url, host) {
+			return "http://" + url
+		}
+	}
+
+	// Se contém "backend" no início e não tem ponto (provavelmente nome de serviço Docker)
+	if strings.HasPrefix(url, "backend") && !strings.Contains(url, ".") {
+		return "http://" + url
+	}
+
+	// Para todas as outras URLs (assumindo produção com domínio externo), usar https://
+	return "https://" + url
 }
 
 func main() {
