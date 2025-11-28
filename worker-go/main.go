@@ -150,9 +150,11 @@ func init() {
 	}
 
 	logInfo("Worker initialized", map[string]interface{}{
-		"operation": "init",
+		"operation":   "init",
 		"rabbitmq_url": rabbitmqURL,
 		"backend_url": backendURL,
+		"endpoint":    "/weather/logs",
+		"full_url":    backendURL,
 	})
 }
 
@@ -443,27 +445,42 @@ func postToBackend(body []byte) (bool, bool) {
 	if err != nil {
 		logError("Failed to create request", err, map[string]interface{}{
 			"operation": "post_backend",
+			"url":       backendURL,
 		})
 		return false, false // erro não temporário
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
+	// Log da URL sendo usada (apenas no primeiro erro para evitar spam)
+	logDebug("Attempting POST request", map[string]interface{}{
+		"operation": "post_backend",
+		"url":       backendURL,
+		"body_size": len(body),
+	})
+
 	// Fazer requisição
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		logError("HTTP request error", err, map[string]interface{}{
 			"operation": "post_backend",
+			"url":       backendURL,
 		})
 		return false, true // erro temporário (rede, timeout, etc)
 	}
 	defer resp.Body.Close()
+
+	// Ler resposta para incluir no log de erro
+	responseBody := make([]byte, 512) // Ler apenas primeiros 512 bytes
+	n, _ := resp.Body.Read(responseBody)
+	responsePreview := string(responseBody[:n])
 
 	// Verificar status code
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		logInfo("POST successful", map[string]interface{}{
 			"operation":  "post_backend",
 			"status_code": resp.StatusCode,
+			"url":        backendURL,
 		})
 		return true, false
 	}
@@ -471,25 +488,41 @@ func postToBackend(body []byte) (bool, bool) {
 	// Status 4xx são erros não temporários (bad request, etc)
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		logError("Client error (non-temporary)", nil, map[string]interface{}{
-			"operation":  "post_backend",
-			"status_code": resp.StatusCode,
+			"operation":      "post_backend",
+			"status_code":    resp.StatusCode,
+			"url":            backendURL,
+			"response_body":  responsePreview,
+			"content_length": resp.ContentLength,
 		})
+		
+		// Para 404, adicionar informações adicionais
+		if resp.StatusCode == 404 {
+			logError("Endpoint not found - verify BACKEND_URL and endpoint path", nil, map[string]interface{}{
+				"operation":     "post_backend",
+				"expected_path": "/weather/logs",
+				"full_url":      backendURL,
+				"hint":          "Check if BACKEND_URL is correct and endpoint exists",
+			})
+		}
 		return false, false
 	}
 
 	// Status 5xx são erros temporários (server error)
 	if resp.StatusCode >= 500 {
 		logError("Server error (temporary)", nil, map[string]interface{}{
-			"operation":  "post_backend",
-			"status_code": resp.StatusCode,
+			"operation":     "post_backend",
+			"status_code":   resp.StatusCode,
+			"url":           backendURL,
+			"response_body": responsePreview,
 		})
 		return false, true
 	}
 
 	// Outros status codes
 	logWarn("Unexpected status code", map[string]interface{}{
-		"operation":  "post_backend",
+		"operation":   "post_backend",
 		"status_code": resp.StatusCode,
+		"url":         backendURL,
 	})
 	return false, true // tratar como temporário por padrão
 }
