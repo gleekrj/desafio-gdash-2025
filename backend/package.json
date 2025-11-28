@@ -9,6 +9,7 @@
     "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "start:prod": "node dist/main.js",
     "build": "tsc",
+    "prestart:prod": "npm run build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\" --fix",
