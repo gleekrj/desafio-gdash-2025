@@ -856,6 +856,15 @@ desafio-gdash/
 - Documentação completa de deploy
 - Guia passo a passo
 
+### ✅ Sistema de Tema Claro/Escuro
+
+- Toggle de tema polido e acessível com animações suaves
+- Persistência local (localStorage) e no backend (MongoDB)
+- Script anti-FOUC para evitar flash de conteúdo não estilizado
+- Detecção automática da preferência do sistema (`prefers-color-scheme`)
+- API REST para sincronização de preferência entre dispositivos
+- Testes unitários completos (frontend e backend)
+
 ## 🚀 Deploy
 
 ### Railway (Recomendado)
@@ -907,12 +916,14 @@ npm run test:watch
 
 O projeto possui configuração de cobertura de testes com thresholds mínimos:
 
-- **Backend (Jest)**: 
+- **Backend (Jest)**:
+
   - Threshold mínimo: 70% para branches, functions, lines e statements
   - Relatórios gerados em `backend/coverage/`
   - Visualização HTML disponível após executar `npm run test:cov`
 
 - **Frontend (Vitest)**:
+
   - Threshold mínimo: 70% para lines, functions, branches e statements
   - Configuração em `frontend/vitest.config.ts`
 
@@ -939,6 +950,275 @@ A documentação completa da API está disponível via Swagger:
 2. Acesse: http://localhost:3000/api
 3. Explore todos os endpoints
 4. Teste diretamente na interface
+
+## 🎨 Sistema de Tema Claro/Escuro
+
+O projeto inclui suporte completo a tema claro/escuro com persistência no frontend (localStorage) e backend (MongoDB).
+
+### 📋 Funcionalidades
+
+- **Toggle Visual**: Botão acessível com ícones de sol/lua e animações suaves
+- **Persistência Local**: Preferência salva em `localStorage` (chave: `gdash:theme`)
+- **Persistência no Backend**: API REST para sincronizar preferência entre dispositivos
+- **Anti-FOUC**: Script inline no `index.html` aplica o tema antes do bundle carregar
+- **Detecção Automática**: Detecta preferência do sistema operacional se não houver preferência salva
+- **Transições Suaves**: Animações CSS para mudanças de cor e background
+- **Acessibilidade**: Suporte completo a ARIA labels, roles e navegação por teclado
+
+### 🚀 Como Usar
+
+#### Frontend
+
+1. **Toggle de Tema**: O botão de tema está disponível na barra de navegação (canto superior direito)
+2. **Preferência Local**: Ao alternar o tema, a preferência é salva automaticamente no `localStorage`
+3. **Persistência**: A preferência persiste entre recarregamentos da página
+
+#### Backend (API)
+
+A API expõe endpoints para gerenciar a preferência de tema do usuário:
+
+**Atualizar Tema do Usuário:**
+
+```http
+PUT /users/:id/theme
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+
+{
+  "theme": "dark" | "light"
+}
+```
+
+**Obter Tema do Usuário:**
+
+```http
+GET /users/:id/theme
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**Respostas:**
+
+- `200 OK`: Tema atualizado/retornado com sucesso
+- `400 Bad Request`: Dados inválidos (tema deve ser "light" ou "dark")
+- `403 Forbidden`: Usuário só pode atualizar/consultar seu próprio tema (exceto admins)
+- `404 Not Found`: Usuário não encontrado
+
+### 🧪 Testando Localmente
+
+#### Frontend
+
+1. Inicie o frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+2. Abra o navegador em `http://localhost:5173`
+3. Clique no botão de tema na navegação
+4. Recarregue a página - o tema deve persistir
+5. Abra DevTools → Application → Local Storage → Verifique `gdash:theme`
+
+#### Backend
+
+1. Inicie o backend:
+
+```bash
+cd backend
+npm install
+npm run start:dev
+```
+
+2. Teste os endpoints (requer autenticação JWT):
+
+```bash
+# Obter token (faça login primeiro)
+TOKEN="seu_jwt_token"
+
+# Atualizar tema do usuário
+curl -X PUT http://localhost:3000/users/USER_ID/theme \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"theme": "dark"}'
+
+# Obter tema do usuário
+curl -X GET http://localhost:3000/users/USER_ID/theme \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+3. Verifique no MongoDB que o campo `theme` foi atualizado no documento do usuário
+
+### 🧩 Estrutura dos Arquivos
+
+#### Frontend
+
+- `frontend/src/theme/theme.css` - Tokens CSS (custom properties) para cores
+- `frontend/src/theme/theme.ts` - Utilitários TypeScript para gerenciar tema
+- `frontend/src/context/ThemeProvider.tsx` - Context Provider React
+- `frontend/src/components/ThemeToggle/ThemeToggle.tsx` - Componente toggle
+- `frontend/src/components/ThemeToggle/ThemeToggle.test.tsx` - Testes unitários
+- `frontend/index.html` - Script anti-FOUC inline
+
+#### Backend
+
+- `backend/src/users/schemas/user.schema.ts` - Schema com campo `theme`
+- `backend/src/users/dto/update-theme.dto.ts` - DTO de validação
+- `backend/src/users/users.controller.ts` - Endpoints PUT e GET `/users/:id/theme`
+- `backend/src/users/users.service.ts` - Métodos `updateTheme()` e `getTheme()`
+- `backend/scripts/add-theme-field.js` - Script de migração opcional
+
+### 🔧 Configuração e Personalização
+
+#### Customizar Cores do Tema
+
+Edite `frontend/src/theme/theme.css` para ajustar as cores dos temas claro/escuro:
+
+```css
+[data-theme='dark'] {
+  --background: 222.2 84% 4.9%; /* Ajuste conforme necessário */
+  --foreground: 210 40% 98%;
+  /* ... outras variáveis */
+}
+```
+
+#### Desabilitar Sincronização com Sistema
+
+No `ThemeProvider`, defina `syncWithSystem={false}`:
+
+```tsx
+<ThemeProvider syncWithSystem={false}>
+  <App />
+</ThemeProvider>
+```
+
+#### Desabilitar Persistência no Backend
+
+Se você quiser usar apenas `localStorage` (sem backend):
+
+1. Não chame os endpoints da API
+2. Remova a lógica de sincronização com backend (se implementada)
+3. O tema continuará funcionando apenas com `localStorage`
+
+### 🗄️ Migração de Dados (Backend)
+
+Se você já tem usuários no banco de dados antes de adicionar o campo `theme`, execute o script de migração:
+
+```bash
+cd backend
+node scripts/add-theme-field.js
+```
+
+O script:
+
+- Conecta ao MongoDB usando `MONGO_URI` ou `MONGODB_URI`
+- Adiciona o campo `theme` (undefined) aos usuários existentes
+- Não altera usuários que já possuem o campo definido
+
+**Nota**: O script requer `dotenv` e `mongoose`. Instale se necessário:
+
+```bash
+cd backend
+npm install dotenv mongoose
+```
+
+### 🔐 Segurança e Autenticação
+
+Os endpoints de tema são protegidos com autenticação JWT:
+
+- **PUT `/users/:id/theme`**: Requer JWT + usuário só pode atualizar próprio tema (admins podem atualizar qualquer usuário)
+- **GET `/users/:id/theme`**: Requer JWT + usuário só pode consultar próprio tema (admins podem consultar qualquer usuário)
+
+Para testar sem autenticação (apenas desenvolvimento), você precisaria remover os guards, mas **não é recomendado**.
+
+### 📱 SSR e SEO
+
+O script anti-FOUC no `index.html` previne o flash de conteúdo não estilizado:
+
+- Aplica o tema **antes** do bundle React carregar
+- Funciona mesmo se o JavaScript estiver desabilitado (tema inicial apenas)
+- Compatível com SSR se você adaptar o script para o servidor
+
+**Nota sobre SSR**: Para aplicações SSR completas (ex: Next.js), você precisaria adaptar o script para rodar no servidor também.
+
+### 🧪 Executar Testes
+
+#### Frontend
+
+```bash
+cd frontend
+npm test                    # Executar testes
+npm run test:ui            # Interface visual do Vitest
+npm run test:coverage      # Com cobertura
+```
+
+#### Backend
+
+```bash
+cd backend
+npm test                    # Executar testes
+npm run test:cov           # Com cobertura
+npm run test:watch         # Modo watch
+```
+
+### 📝 Notas de Deploy
+
+#### Variáveis de Ambiente
+
+Não são necessárias variáveis adicionais para o sistema de tema. O backend já usa `MONGO_URI` e `JWT_SECRET` existentes.
+
+#### Build
+
+O tema é incluído automaticamente no build:
+
+```bash
+# Frontend
+cd frontend
+npm run build
+
+# O script anti-FOUC já está no index.html e será incluído no build
+```
+
+#### Migração em Produção
+
+Se estiver deployando em produção e já há usuários:
+
+1. Execute o script de migração antes ou depois do deploy
+2. Ou configure o MongoDB para aceitar documentos sem o campo `theme` (já funciona - campo é opcional)
+
+### 🐛 Troubleshooting
+
+**Tema não persiste após recarregar:**
+
+- Verifique se `localStorage` está habilitado no navegador
+- Verifique no DevTools se `gdash:theme` existe no `localStorage`
+- Verifique console para erros
+
+**Flash de conteúdo branco (FOUC):**
+
+- Verifique se o script no `index.html` está presente
+- Verifique se o script está **antes** do bundle (`<script type="module">`)
+- Limpe o cache do navegador (Ctrl+Shift+Delete)
+
+**Tema não sincroniza com backend:**
+
+- Verifique se o token JWT é válido
+- Verifique se o `userId` está correto
+- Verifique logs do backend para erros
+- Verifique CORS se frontend e backend estão em domínios diferentes
+
+**Botão de tema não aparece:**
+
+- Verifique se o `ThemeToggle` está importado no componente de navegação
+- Verifique se `ThemeProvider` envolve a aplicação no `main.tsx`
+- Verifique console do navegador para erros
+
+### 📚 Referências
+
+- [Tailwind CSS Dark Mode](https://tailwindcss.com/docs/dark-mode)
+- [CSS Custom Properties](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties)
+- [prefers-color-scheme](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-color-scheme)
+- [ARIA Switch Role](https://www.w3.org/WAI/ARIA/apg/patterns/switch/)
 
 ## 🎯 Próximos Passos
 
