@@ -22,8 +22,8 @@ describe('useWeatherExports', () => {
     vi.clearAllMocks();
     
     // Mock URL methods
-    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
-    global.URL.revokeObjectURL = vi.fn();
+    globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+    globalThis.URL.revokeObjectURL = vi.fn();
     
     // Create a simple mock anchor element
     const mockAnchor = {

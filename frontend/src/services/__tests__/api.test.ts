@@ -23,7 +23,8 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 // Mock fetch
-global.fetch = vi.fn();
+const mockFetch = vi.fn();
+globalThis.fetch = mockFetch;
 
 describe('api', () => {
   beforeEach(() => {
@@ -51,7 +52,7 @@ describe('api', () => {
         user: { id: '1', email: 'test@test.com', name: 'Test User' },
       };
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       } as Response);
@@ -64,7 +65,7 @@ describe('api', () => {
     });
 
     it('should throw error on failed login', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: false,
         json: async () => ({ message: 'Invalid credentials' }),
       } as Response);
@@ -80,7 +81,7 @@ describe('api', () => {
         user: { id: '1', email: 'test@test.com', name: 'Test User' },
       };
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       } as Response);
@@ -92,7 +93,7 @@ describe('api', () => {
     });
 
     it('should handle registration errors', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: false,
         json: async () => ({ message: 'Email already exists' }),
       } as Response);
@@ -101,7 +102,7 @@ describe('api', () => {
     });
 
     it('should handle array error messages', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: false,
         json: async () => ({ message: ['Error 1', 'Error 2'] }),
       } as Response);
@@ -162,7 +163,7 @@ describe('api', () => {
 
       localStorageMock.setItem('token', 'token123');
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         json: async () => mockData,
       } as Response);
@@ -175,22 +176,22 @@ describe('api', () => {
     it('should include filters in query params', async () => {
       localStorageMock.setItem('token', 'token123');
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: [], page: 1, limit: 10, total: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false }),
       } as Response);
 
       await api.getWeatherLogsPaginated(1, 10, 'São Paulo', '2025-01-01', '2025-01-31');
 
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('city=S%C3%A3o+Paulo'),
         expect.any(Object)
       );
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('startDate=2025-01-01'),
         expect.any(Object)
       );
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('endDate=2025-01-31'),
         expect.any(Object)
       );
@@ -211,7 +212,7 @@ describe('api', () => {
 
       localStorageMock.setItem('token', 'token123');
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         json: async () => mockPaginated,
       } as Response);
@@ -239,7 +240,7 @@ describe('api', () => {
 
       localStorageMock.setItem('token', 'token123');
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         json: async () => mockInsights,
       } as Response);
@@ -252,14 +253,14 @@ describe('api', () => {
     it('should include city in query params when provided', async () => {
       localStorageMock.setItem('token', 'token123');
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ summary: 'Test' }),
       } as Response);
 
       await api.getWeatherInsights('São Paulo');
 
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('city=S%C3%A3o+Paulo'),
         expect.any(Object)
       );
@@ -272,7 +273,7 @@ describe('api', () => {
 
       localStorageMock.setItem('token', 'token123');
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         json: async () => mockCities,
       } as Response);
@@ -289,7 +290,7 @@ describe('api', () => {
 
       localStorageMock.setItem('token', 'token123');
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         blob: async () => mockBlob,
       } as Response);
@@ -306,7 +307,7 @@ describe('api', () => {
 
       localStorageMock.setItem('token', 'token123');
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         blob: async () => mockBlob,
       } as Response);
@@ -321,12 +322,20 @@ describe('api', () => {
     it('should redirect to login on 401', async () => {
       localStorageMock.setItem('token', 'invalid-token');
       const originalLocation = window.location;
+      const mockLocation = {
+        ...originalLocation,
+        href: '',
+        assign: vi.fn(),
+        replace: vi.fn(),
+        reload: vi.fn(),
+      };
 
-      // @ts-ignore
+      // @ts-expect-error - Mocking window.location for testing
       delete window.location;
-      window.location = { ...originalLocation, href: '' };
+      // @ts-expect-error - Mocking window.location for testing
+      window.location = mockLocation as Location;
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: false,
         status: 401,
       } as Response);
@@ -338,20 +347,21 @@ describe('api', () => {
       expect(localStorageMock.getItem('token')).toBeNull();
       expect(window.location.href).toBe('/login');
 
+      // @ts-expect-error - Restoring window.location
       window.location = originalLocation;
     });
 
     it('should include Authorization header when token exists', async () => {
       localStorageMock.setItem('token', 'token123');
 
-      vi.mocked(fetch).mockResolvedValueOnce({
+      vi.mocked(mockFetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: [], page: 1, limit: 10, total: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false }),
       } as Response);
 
       await api.getWeatherLogsPaginated(1, 10);
 
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           headers: expect.objectContaining({
