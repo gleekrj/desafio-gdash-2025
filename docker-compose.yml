@@ -84,7 +84,7 @@ services:
     environment:
       - BACKEND_URL=${BACKEND_URL}
       - RABBITMQ_URL=${RABBITMQ_URL}
-      - COLLECTOR_MODE=${COLLECTOR_MODE:-direct}
+      - COLLECTOR_MODE=${COLLECTOR_MODE:-rabbit}
       - COLLECT_INTERVAL=${COLLECT_INTERVAL:-60}
       - OPENWEATHER_KEY=${OPENWEATHER_KEY:-}
     env_file: .env

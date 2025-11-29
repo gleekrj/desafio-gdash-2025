@@ -196,9 +196,7 @@ VITE_API_URL=https://seu-backend.up.railway.app
 ### Collector - Variáveis (se deployar)
 
 ```env
-# Modo de operação
-COLLECTOR_MODE=direct
-# OU
+# Modo de operação (padrão recomendado: rabbit)
 COLLECTOR_MODE=rabbit
 
 # URL do Backend

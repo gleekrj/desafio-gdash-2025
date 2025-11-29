@@ -68,7 +68,7 @@ if not env_loaded:
 # Variáveis de ambiente
 BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:3000')
 RABBITMQ_URL = os.getenv('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672/')
-COLLECTOR_MODE = os.getenv('COLLECTOR_MODE', 'direct')
+COLLECTOR_MODE = os.getenv('COLLECTOR_MODE', 'rabbit')
 COLLECT_INTERVAL = int(os.getenv('COLLECT_INTERVAL', '60'))
 OPENWEATHER_KEY = os.getenv('OPENWEATHER_KEY', '')
 

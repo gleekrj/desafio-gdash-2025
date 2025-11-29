@@ -287,7 +287,7 @@ As seguintes variáveis têm valores padrão, mas podem ser customizadas:
 - `RABBITMQ_MANAGEMENT_PORT` - Porta da UI (padrão: 15672)
 - `BACKEND_PORT` - Porta do backend (padrão: 3000)
 - `FRONTEND_PORT` - Porta do frontend (padrão: 5173)
-- `COLLECTOR_MODE` - Modo do collector (padrão: direct)
+- `COLLECTOR_MODE` - Modo do collector (padrão: rabbit)
 - `COLLECT_INTERVAL` - Intervalo de coleta em segundos (padrão: 60)
 - `OPENWEATHER_KEY` - Chave da API OpenWeather (opcional, usa mock se vazio)
 
@@ -1223,7 +1223,6 @@ Se estiver deployando em produção e já há usuários:
 ## 🎯 Próximos Passos
 
 - [ ] Adicionar monitoramento (Prometheus/Grafana)
-- [ ] Implementar rate limiting
 - [ ] Adicionar cache (Redis)
 - [ ] Melhorar testes E2E
 - [ ] Adicionar métricas e alertas

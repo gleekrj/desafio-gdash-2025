@@ -16,7 +16,7 @@ RUN useradd -m -u 1000 collector && \
 USER collector
 
 # Variáveis de ambiente padrão (podem ser sobrescritas)
-ENV COLLECTOR_MODE=direct
+ENV COLLECTOR_MODE=rabbit
 ENV COLLECT_INTERVAL=60
 ENV BACKEND_URL=http://backend:3000
 ENV RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
