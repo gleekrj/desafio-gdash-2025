@@ -94,6 +94,32 @@ Collector → [Modo Direct] → Backend → MongoDB
          → [Modo Rabbit] → RabbitMQ → Worker → Backend → MongoDB
 ```
 
+## 📹 Vídeos Explicativos
+
+### Versão Compacta (Recomendada - Requisito do Desafio)
+
+**🎬 [Assistir Versão Compacta (≤ 5 minutos)](https://youtu.be/Ws1th0XdNow)**
+
+Esta versão atende ao requisito do desafio de **máximo 5 minutos** e cobre:
+
+- ✅ Arquitetura geral da aplicação
+- ✅ Pipeline de dados (Python → Message Broker → Go → NestJS → Frontend)
+- ✅ Insights de IA e funcionalidades principais
+- ✅ Demonstração da aplicação rodando via Docker Compose
+
+### Versão Completa (Detalhada)
+
+**🎬 [Assistir Versão Completa](https://youtu.be/mO5NCcF9wMs)**
+
+Para uma exploração mais detalhada das funcionalidades, assista à versão completa que inclui:
+
+- 🔍 Demonstração aprofundada de cada funcionalidade
+- 🔍 Detalhes da implementação dos componentes
+- 🔍 Explicação técnica adicional das decisões de arquitetura
+- 🔍 Demonstração completa do fluxo de dados e integrações
+
+---
+
 ## 📦 Pré-requisitos
 
 ### Instalar Docker
