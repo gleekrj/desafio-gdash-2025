@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	queueName      = "weather"
+	queueName = "weather"
 	// maxRetries define o número máximo de tentativas para enviar mensagem ao backend.
 	// Escolhemos 3 tentativas como balanceamento entre:
 	// - Resiliência: permite recuperação de falhas temporárias (rede, timeout, 5xx)
@@ -43,12 +43,12 @@ func logStructured(level, message string, fields map[string]interface{}) {
 		"service":   "worker",
 		"message":   message,
 	}
-	
+
 	// Adicionar campos extras
 	for k, v := range fields {
 		logData[k] = v
 	}
-	
+
 	// Converter para JSON
 	jsonData, err := json.Marshal(logData)
 	if err != nil {
@@ -56,7 +56,7 @@ func logStructured(level, message string, fields map[string]interface{}) {
 		log.Printf("[worker] [%s] %s", level, message)
 		return
 	}
-	
+
 	// Usar log padrão com JSON
 	log.Printf("[worker] %s", string(jsonData))
 }
@@ -126,19 +126,19 @@ func init() {
 
 	// Detectar se está rodando localmente (fora do Docker)
 	isLocal := isRunningLocally()
-	
+
 	// Garantir protocolos antes de verificar e ajustar
 	// RabbitMQ URL geralmente já vem com protocolo (amqp://, amqps://), mas vamos garantir
 	// Backend URL precisa garantir protocolo
 	backendURL = ensureProtocol(backendURL)
-	
+
 	// Ajustar RabbitMQ URL apenas se for URL Docker interna (ex: rabbitmq:5672)
 	// Não ajustar URLs externas (ex: amqps://host.cloudamqp.com)
 	if isLocal && isDockerInternalURL(rabbitmqURL) {
 		rabbitmqURL = adjustURLForLocal(rabbitmqURL, "rabbitmq", "localhost")
 		log.Printf("[worker] Detected local execution, adjusted RABBITMQ_URL to localhost")
 	}
-	
+
 	// Ajustar backend URL apenas se for URL Docker interna (ex: backend:3000)
 	// NUNCA ajustar URLs de produção (que contêm domínios externos como .railway.app, .com, etc)
 	if isLocal && isDockerInternalURL(backendURL) {
@@ -158,11 +158,11 @@ func init() {
 	}
 
 	logInfo("Worker initialized", map[string]interface{}{
-		"operation":   "init",
+		"operation":    "init",
 		"rabbitmq_url": rabbitmqURL,
-		"backend_url": backendURL,
-		"endpoint":    "/weather/logs",
-		"full_url":    backendURL,
+		"backend_url":  backendURL,
+		"endpoint":     "/weather/logs",
+		"full_url":     backendURL,
 	})
 }
 
@@ -187,7 +187,7 @@ func isDockerInternalURL(url string) bool {
 	//   - https://backend.up.railway.app
 	//   - https://desafio-gdash-backend.up.railway.app
 	//   - http://localhost:3000 (já é localhost, não precisa ajustar)
-	
+
 	// Remover protocolo para análise (incluindo amqp, amqps)
 	cleanURL := url
 	protocols := []string{"http://", "https://", "amqp://", "amqps://"}
@@ -197,12 +197,12 @@ func isDockerInternalURL(url string) bool {
 			break
 		}
 	}
-	
+
 	// Se contém localhost ou 127.0.0.1, não precisa ajustar (já é local)
 	if strings.HasPrefix(cleanURL, "localhost") || strings.HasPrefix(cleanURL, "127.0.0.1") {
 		return false
 	}
-	
+
 	// Extrair o hostname (parte antes de : ou /)
 	hostname := cleanURL
 	if idx := strings.Index(hostname, ":"); idx != -1 {
@@ -211,7 +211,7 @@ func isDockerInternalURL(url string) bool {
 	if idx := strings.Index(hostname, "/"); idx != -1 {
 		hostname = hostname[:idx]
 	}
-	
+
 	// Se o hostname contém ponto, é um domínio externo (ex: backend.up.railway.app)
 	// Se não contém ponto, é provavelmente um nome de serviço Docker (ex: backend, rabbitmq)
 	return !strings.Contains(hostname, ".")
@@ -236,7 +236,7 @@ func adjustURLForLocal(url, dockerHost, localHost string) string {
 		protocol = "amqps://"
 		url = strings.TrimPrefix(url, "amqps://")
 	}
-	
+
 	// Substituir hostname Docker por localhost
 	// Exemplo: "backend:3000" -> "localhost:3000"
 	if strings.HasPrefix(url, dockerHost+":") {
@@ -244,7 +244,7 @@ func adjustURLForLocal(url, dockerHost, localHost string) string {
 	} else if url == dockerHost {
 		url = localHost
 	}
-	
+
 	return protocol + url
 }
 
@@ -318,7 +318,7 @@ func main() {
 		log.Fatalf("[worker] Failed to declare queue: %v", err)
 	}
 	logInfo(fmt.Sprintf("Queue '%s' declared", queueName), map[string]interface{}{
-		"operation": "declare_queue",
+		"operation":  "declare_queue",
 		"queue_name": queueName,
 	})
 
@@ -346,7 +346,7 @@ func main() {
 		log.Fatalf("[worker] Failed to register consumer: %v", err)
 	}
 	logInfo("Waiting for messages", map[string]interface{}{
-		"operation": "consume_start",
+		"operation":  "consume_start",
 		"queue_name": queueName,
 	})
 
@@ -370,16 +370,27 @@ func main() {
 
 // processMessage processa uma mensagem do RabbitMQ
 func processMessage(ch *amqp.Channel, d amqp.Delivery) {
+	// Extrair informações da mensagem para log (incluindo city se disponível)
+	var payload map[string]interface{}
+	city := "unknown"
+	if err := json.Unmarshal(d.Body, &payload); err == nil {
+		if cityVal, ok := payload["city"].(string); ok {
+			city = cityVal
+		}
+	}
+
 	logInfo("Received message", map[string]interface{}{
-		"operation": "process_message",
+		"operation":    "process_message",
 		"message_size": len(d.Body),
 		"delivery_tag": d.DeliveryTag,
+		"city":         city,
 	})
 
 	// Validar JSON mínimo
 	if !isValidJSON(d.Body) {
 		logError("Invalid JSON format, rejecting message", nil, map[string]interface{}{
 			"operation": "validate_json",
+			"city":      city,
 		})
 		d.Nack(false, false) // não requeue mensagens inválidas
 		return
@@ -394,10 +405,12 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery) {
 		if err != nil {
 			logError("Failed to ack message", err, map[string]interface{}{
 				"operation": "ack_message",
+				"city":      city,
 			})
 		} else {
 			logInfo("Message acknowledged successfully", map[string]interface{}{
 				"operation": "ack_message",
+				"city":      city,
 			})
 		}
 	} else {
@@ -406,11 +419,13 @@ func processMessage(ch *amqp.Channel, d amqp.Delivery) {
 		if err != nil {
 			logError("Failed to nack message", err, map[string]interface{}{
 				"operation": "nack_message",
+				"city":      city,
 			})
 		} else {
 			logWarn("Message nacked and requeued", map[string]interface{}{
 				"operation": "nack_message",
-				"retries": maxRetries,
+				"retries":   maxRetries,
+				"city":      city,
 			})
 		}
 	}
@@ -451,10 +466,10 @@ func isValidJSON(data []byte) bool {
 	valid := hasTimestamp && hasTemperature && hasHumidity
 	if !valid {
 		logWarn("Missing required fields", map[string]interface{}{
-			"operation":      "validate_json",
-			"has_timestamp":  hasTimestamp,
+			"operation":       "validate_json",
+			"has_timestamp":   hasTimestamp,
 			"has_temperature": hasTemperature,
-			"has_humidity":   hasHumidity,
+			"has_humidity":    hasHumidity,
 		})
 	}
 
@@ -473,8 +488,8 @@ func postToBackendWithRetry(body []byte) bool {
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		logInfo("Attempting POST to backend", map[string]interface{}{
-			"operation": "post_backend",
-			"attempt":   attempt,
+			"operation":   "post_backend",
+			"attempt":     attempt,
 			"max_retries": maxRetries,
 		})
 
@@ -509,7 +524,7 @@ func postToBackendWithRetry(body []byte) bool {
 	}
 
 	logError("Failed to POST after all attempts", nil, map[string]interface{}{
-		"operation": "post_backend",
+		"operation":   "post_backend",
 		"max_retries": maxRetries,
 	})
 	return false
@@ -555,9 +570,9 @@ func postToBackend(body []byte) (bool, bool) {
 	// Verificar status code
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		logInfo("POST successful", map[string]interface{}{
-			"operation":  "post_backend",
+			"operation":   "post_backend",
 			"status_code": resp.StatusCode,
-			"url":        backendURL,
+			"url":         backendURL,
 		})
 		return true, false
 	}
@@ -571,7 +586,7 @@ func postToBackend(body []byte) (bool, bool) {
 			"response_body":  responsePreview,
 			"content_length": resp.ContentLength,
 		})
-		
+
 		// Para 404, adicionar informações adicionais
 		if resp.StatusCode == 404 {
 			logError("Endpoint not found - verify BACKEND_URL and endpoint path", nil, map[string]interface{}{

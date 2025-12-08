@@ -8,6 +8,7 @@ import os
 import time
 import json
 import logging
+import hashlib
 import requests
 import pika
 import pika.exceptions
@@ -71,6 +72,10 @@ RABBITMQ_URL = os.getenv('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672/')
 COLLECTOR_MODE = os.getenv('COLLECTOR_MODE', 'rabbit')
 COLLECT_INTERVAL = int(os.getenv('COLLECT_INTERVAL', '60'))
 OPENWEATHER_KEY = os.getenv('OPENWEATHER_KEY', '')
+# Delay entre requisições à API (em segundos) - padrão 2 segundos para respeitar rate limiting
+API_REQUEST_DELAY = float(os.getenv('API_REQUEST_DELAY', '2.0'))
+# Número máximo de tentativas para requisições com erro 429
+MAX_RETRY_ATTEMPTS = int(os.getenv('MAX_RETRY_ATTEMPTS', '3'))
 
 # Detectar se está rodando localmente (Windows não tem /.dockerenv)
 def is_running_locally() -> bool:
@@ -166,6 +171,7 @@ CAPITAL_COORDINATES = {
 def fetch_from_open_meteo(city: str, lat: float, lon: float) -> Dict[str, any]:
     """
     Obtém dados climáticos da API Open-Meteo para uma cidade específica.
+    Implementa retry com backoff exponencial para erros 429 (Too Many Requests).
     
     Args:
         city: Nome da cidade
@@ -175,53 +181,116 @@ def fetch_from_open_meteo(city: str, lat: float, lon: float) -> Dict[str, any]:
     Returns:
         dict: Dados normalizados com timestamp, temperature, humidity, city
     """
-    logger.info(f"[collector] Coletando dados para {city}...")
+    logger.info(f"[collector] Coletando dados para {city} (lat={lat}, lon={lon})...")
     
-    # Se não houver chave, usar dados mock
+    # Gerar dados mock únicos por cidade baseados em hash das coordenadas
+    # Isso garante que cada cidade tenha dados diferentes mesmo em modo mock
+    def generate_mock_data(city_name: str, latitude: float, longitude: float) -> Dict[str, any]:
+        """Gera dados mock únicos baseados nas coordenadas da cidade."""
+        # Usar hash das coordenadas para gerar valores únicos mas consistentes
+        coord_hash = hashlib.md5(f"{latitude},{longitude}".encode()).hexdigest()
+        # Converter primeiros 4 caracteres do hash em números para temperatura e umidade
+        temp_base = int(coord_hash[:2], 16) % 20  # 0-19 graus de variação
+        humidity_base = int(coord_hash[2:4], 16) % 30  # 0-29% de variação
+        
+        # Temperatura entre 18°C e 37°C (variação por cidade)
+        temperature = 18.0 + temp_base + (int(coord_hash[4:6], 16) % 10) * 0.1
+        # Umidade entre 50% e 90% (variação por cidade)
+        humidity = 50.0 + humidity_base + (int(coord_hash[6:8], 16) % 10) * 0.1
+        
+        return {
+            "timestamp": datetime.now(UTC).isoformat().replace('+00:00', 'Z'),
+            "temperature": round(temperature, 1),
+            "humidity": round(humidity, 1),
+            "city": city_name
+        }
+    
+    # Se não houver chave, usar dados mock únicos
     if not OPENWEATHER_KEY:
-        logger.warning(f"[collector] OPENWEATHER_KEY não fornecida, usando dados mock para {city}")
-        return {
-            "timestamp": datetime.now(UTC).isoformat().replace('+00:00', 'Z'),
-            "temperature": 25.5,
-            "humidity": 70.0,
-            "city": city
-        }
+        logger.warning(f"[collector] OPENWEATHER_KEY não fornecida, usando dados mock únicos para {city}")
+        mock_data = generate_mock_data(city, lat, lon)
+        logger.info(f"[collector] Dados mock gerados para {city}: temp={mock_data['temperature']}°C, humidity={mock_data['humidity']}%")
+        return mock_data
     
-    try:
-        # Chamada para Open-Meteo (API gratuita, não requer chave)
-        url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": lat,
-            "longitude": lon,
-            "current": "temperature_2m,relative_humidity_2m",
-            "timezone": "America/Sao_Paulo"
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        current = data.get('current', {})
-        
-        payload = {
-            "timestamp": datetime.now(UTC).isoformat().replace('+00:00', 'Z'),
-            "temperature": current.get('temperature_2m', 0),
-            "humidity": current.get('relative_humidity_2m', 0),
-            "city": city
-        }
-        
-        logger.info(f"[collector] Dados coletados para {city}: temp={payload['temperature']}°C, humidity={payload['humidity']}%")
-        return payload
-        
-    except Exception as e:
-        logger.error(f"[collector] Erro ao buscar dados da API para {city}: {e}")
-        # Retornar dados mock em caso de erro
-        return {
-            "timestamp": datetime.now(UTC).isoformat().replace('+00:00', 'Z'),
-            "temperature": 25.0,
-            "humidity": 65.0,
-            "city": city
-        }
+    # Tentar fazer requisição com retry para erro 429
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "current": "temperature_2m,relative_humidity_2m",
+        "timezone": "America/Sao_Paulo"
+    }
+    
+    for attempt in range(MAX_RETRY_ATTEMPTS):
+        try:
+            logger.debug(f"[collector] Fazendo requisição para Open-Meteo: {url} com params={params} (tentativa {attempt + 1}/{MAX_RETRY_ATTEMPTS})")
+            response = requests.get(url, params=params, timeout=10)
+            
+            # Tratamento específico para erro 429 (Too Many Requests)
+            if response.status_code == 429:
+                # Calcular backoff exponencial: 2^attempt segundos (mínimo 5s, máximo 60s)
+                backoff_time = min(max(2 ** attempt, 5), 60)
+                
+                if attempt < MAX_RETRY_ATTEMPTS - 1:
+                    logger.warning(f"[collector] Rate limit atingido (429) para {city}. Aguardando {backoff_time}s antes de tentar novamente (tentativa {attempt + 1}/{MAX_RETRY_ATTEMPTS})...")
+                    time.sleep(backoff_time)
+                    continue
+                else:
+                    logger.error(f"[collector] Rate limit atingido (429) para {city} após {MAX_RETRY_ATTEMPTS} tentativas. Usando dados mock.")
+                    mock_data = generate_mock_data(city, lat, lon)
+                    logger.info(f"[collector] Dados mock gerados para {city}: temp={mock_data['temperature']}°C, humidity={mock_data['humidity']}%")
+                    return mock_data
+            
+            # Verificar outros erros HTTP
+            response.raise_for_status()
+            data = response.json()
+            
+            current = data.get('current', {})
+            temperature = current.get('temperature_2m', 0)
+            humidity = current.get('relative_humidity_2m', 0)
+            
+            payload = {
+                "timestamp": datetime.now(UTC).isoformat().replace('+00:00', 'Z'),
+                "temperature": temperature,
+                "humidity": humidity,
+                "city": city
+            }
+            
+            logger.info(f"[collector] Dados coletados da API para {city}: temp={payload['temperature']}°C, humidity={payload['humidity']}% (lat={lat}, lon={lon})")
+            
+            # Verificar se os dados são válidos (não zero ou None)
+            if temperature == 0 or humidity == 0:
+                logger.warning(f"[collector] API retornou dados inválidos (temp={temperature}, humidity={humidity}) para {city}, usando dados mock")
+                return generate_mock_data(city, lat, lon)
+            
+            return payload
+            
+        except requests.exceptions.HTTPError as e:
+            # Erros HTTP que não são 429 (429 já foi tratado antes de raise_for_status())
+            # Se chegou aqui, é um erro HTTP diferente de 429
+            logger.error(f"[collector] Erro HTTP ao buscar dados da API para {city}: {e}")
+            # Retornar dados mock únicos em caso de erro
+            mock_data = generate_mock_data(city, lat, lon)
+            logger.info(f"[collector] Usando dados mock para {city} devido a erro HTTP: temp={mock_data['temperature']}°C, humidity={mock_data['humidity']}%")
+            return mock_data
+        except requests.exceptions.RequestException as e:
+            logger.error(f"[collector] Erro de requisição ao buscar dados da API para {city}: {e}")
+            # Retornar dados mock únicos em caso de erro
+            mock_data = generate_mock_data(city, lat, lon)
+            logger.info(f"[collector] Usando dados mock para {city} devido a erro: temp={mock_data['temperature']}°C, humidity={mock_data['humidity']}%")
+            return mock_data
+        except Exception as e:
+            logger.error(f"[collector] Erro inesperado ao buscar dados da API para {city}: {e}")
+            # Retornar dados mock únicos em caso de erro
+            mock_data = generate_mock_data(city, lat, lon)
+            logger.info(f"[collector] Usando dados mock para {city} devido a erro: temp={mock_data['temperature']}°C, humidity={mock_data['humidity']}%")
+            return mock_data
+    
+    # Se chegou aqui, todas as tentativas falharam
+    logger.error(f"[collector] Falha ao buscar dados da API para {city} após {MAX_RETRY_ATTEMPTS} tentativas. Usando dados mock.")
+    mock_data = generate_mock_data(city, lat, lon)
+    logger.info(f"[collector] Dados mock gerados para {city}: temp={mock_data['temperature']}°C, humidity={mock_data['humidity']}%")
+    return mock_data
 
 
 def fetch_all_capitals() -> List[Dict[str, any]]:
@@ -238,11 +307,14 @@ def fetch_all_capitals() -> List[Dict[str, any]]:
         try:
             payload = fetch_from_open_meteo(city, coords['lat'], coords['lon'])
             all_payloads.append(payload)
-            # Pequeno delay entre requisições para evitar rate limiting
-            time.sleep(0.5)
+            # Delay entre requisições para respeitar rate limiting da API
+            # Usar delay configurável via API_REQUEST_DELAY (padrão 2 segundos)
+            time.sleep(API_REQUEST_DELAY)
         except Exception as e:
             logger.error(f"[collector] Erro ao coletar dados para {city}: {e}")
             # Continuar com próxima cidade mesmo em caso de erro
+            # Ainda assim, aguardar um pouco antes da próxima requisição
+            time.sleep(API_REQUEST_DELAY)
     
     logger.info(f"[collector] Coleta concluída: {len(all_payloads)} capitais processadas")
     return all_payloads

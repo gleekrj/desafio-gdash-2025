@@ -25,7 +25,9 @@ export class WeatherController {
   @ApiResponse({ status: 201, description: 'Log criado com sucesso', type: WeatherLog })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   async create(@Body() createWeatherLogDto: CreateWeatherLogDto) {
-    console.log('[backend][weather] POST /weather/logs - Received payload:', JSON.stringify(createWeatherLogDto, null, 2));
+    const city = createWeatherLogDto.city || 'N/A';
+    console.log(`[backend][weather] POST /weather/logs - Received payload for city: ${city}`);
+    console.log(`[backend][weather] Full payload:`, JSON.stringify(createWeatherLogDto, null, 2));
     return this.weatherService.create(createWeatherLogDto);
   }
 
