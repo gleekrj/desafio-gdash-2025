@@ -1,51 +1,51 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Label } from '../components/ui/label'
-import { login, register } from '../services/api'
-import { useToast } from '../hooks/use-toast'
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { login, register } from '../services/api';
+import { useToast } from '../hooks/use-toast';
 
 export default function Login() {
-  const [isLogin, setIsLogin] = useState(true)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
-  const { toast } = useToast()
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
       if (isLogin) {
-        await login(email, password)
+        await login(email, password);
         toast({
           title: 'Login realizado com sucesso!',
           description: 'Redirecionando...',
-        })
+        });
       } else {
-        await register(name, email, password)
+        await register(name, email, password);
         toast({
           title: 'Conta criada com sucesso!',
           description: 'Redirecionando...',
-        })
+        });
       }
       setTimeout(() => {
-        navigate('/dashboard')
-      }, 500)
+        navigate('/dashboard');
+      }, 500);
     } catch (error) {
       toast({
         title: 'Erro',
         description: error instanceof Error ? error.message : 'Ocorreu um erro',
         variant: 'destructive',
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -126,8 +126,23 @@ export default function Login() {
             </Button>
           </div>
         </form>
+
+        {isLogin && (
+          <div className="mt-6 p-4 bg-muted/50 border border-border rounded-lg">
+            <p className="text-sm text-muted-foreground font-medium mb-2">
+              Usuário de teste disponível:
+            </p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>
+                <span className="font-semibold">Email:</span> teste@teste.com
+              </p>
+              <p>
+                <span className="font-semibold">Senha:</span> Teste_2025
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }
-
